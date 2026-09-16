@@ -17,30 +17,21 @@ a colour, a label and whether there was an answer at all, which is as true of a 
 rack, and one type means the no-data rule cannot be implemented three times and drift.
 """
 
-import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 
-from netbox_spatial_lens.overlays import NO_DATA_COLOUR, Colouring, LegendEntry, RackValue
-from netbox_spatial_lens.palette import RESERVED_COLOURS, STATUS_COLOURS, distinct_colours
+from netbox_spatial_lens.overlays import NO_DATA_COLOUR, BuiltinColouring, Colouring, RackValue, Registry
+from netbox_spatial_lens.palette import STATUS_COLOURS, distinct_colours
 
 __all__ = (
     'BUILTIN_SITE_OVERLAYS',
-    'RESERVED_COLOURS',
     'SiteOverlay',
-    'distinct_colours',
     'get_site_overlay',
     'get_site_overlays',
-    'group_overlay',
-    'region_overlay',
     'register_builtin_site_overlays',
     'register_site_overlay',
-    'status_overlay',
-    'tenant_overlay',
+    'registry',
+    'resolve_site_overlay',
 )
-
-logger = logging.getLogger('netbox.plugins.netbox_spatial_lens.site_overlays')
-
-_registry: dict[str, 'SiteOverlay'] = {}
 
 
 class SiteOverlay(Colouring):
@@ -118,68 +109,23 @@ def status_overlay(sites: Sequence) -> dict[int, RackValue]:
     return values
 
 
-BUILTIN_SITE_OVERLAYS: dict[str, tuple[str, Callable, str]] = {
-    'group': ('Group', group_overlay, 'How the estate is organised.'),
-    'status': ('Status', status_overlay, 'What is live, planned or being retired.'),
-    'tenant': ('Tenant', tenant_overlay, 'Who owns each site.'),
-    'region': ('Region', region_overlay, 'The region each site is filed under.'),
+BUILTIN_SITE_OVERLAYS = {
+    'group': BuiltinColouring('Group', group_overlay, 'How the estate is organised.'),
+    'status': BuiltinColouring('Status', status_overlay, 'What is live, planned or being retired.'),
+    'tenant': BuiltinColouring('Tenant', tenant_overlay, 'Who owns each site.'),
+    'region': BuiltinColouring('Region', region_overlay, 'The region each site is filed under.'),
 }
 
-
-def register_site_overlay(
-    name: str,
-    label: str,
-    fn: Callable,
-    description: str = '',
-    legend: list[LegendEntry] | None = None,
-) -> 'SiteOverlay':
-    """
-    Make a colouring selectable on the world map.
-
-    `name` is the key used in the URL, so it survives in a shared link; keep it stable and
-    change the label freely.
-    """
-    if name in _registry:
-        logger.warning(f'Site overlay "{name}" is already registered; the later registration wins.')
-    _registry[name] = SiteOverlay(
-        name=name,
-        label=label,
-        fn=fn,
-        description=description,
-        legend=list(legend or []),
-    )
-    return _registry[name]
-
-
-def get_site_overlays() -> list['SiteOverlay']:
-    """
-    Every registered colouring, in registration order.
-    """
-    return list(_registry.values())
-
-
-def get_site_overlay(name: str | None) -> 'SiteOverlay | None':
-    """
-    One colouring by name, or None where nothing answers to it.
-
-    A link carrying a colouring a later release removed must open the map rather than fail, so
-    the caller falls back rather than this raising.
-    """
-    return _registry.get(name) if name else None
-
-
-def register_builtin_site_overlays(names: list[str] | None = None) -> None:
-    """
-    Register the built-in site colourings, all of them or the named subset.
-
-    An unrecognised name is logged and skipped rather than raised, so a typo in the plugin
-    configuration cannot stop NetBox from booting.
-    """
-    if names is None:
-        names = list(BUILTIN_SITE_OVERLAYS)
-    for name in names:
-        if name not in BUILTIN_SITE_OVERLAYS:
-            logger.warning(f'Unknown built-in site overlay "{name}"; skipped.')
-            continue
-        label, fn, description = BUILTIN_SITE_OVERLAYS[name]
-        register_site_overlay(name, label, fn, description=description)
+# The world map's colourings. The functions below are the names other plugins register with.
+registry = Registry(
+    kind=SiteOverlay,
+    noun='Site overlay',
+    default_setting='default_site_overlay',
+    builtins_setting='enable_builtin_site_overlays',
+    builtins=BUILTIN_SITE_OVERLAYS,
+)
+register_site_overlay = registry.register
+get_site_overlays = registry.all
+get_site_overlay = registry.get
+resolve_site_overlay = registry.resolve
+register_builtin_site_overlays = registry.register_builtins

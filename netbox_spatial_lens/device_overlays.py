@@ -14,10 +14,17 @@ an answer at all, which is exactly as true of a device as of a rack, and having 
 the no-data rule cannot be implemented twice and drift.
 """
 
-import logging
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 
-from netbox_spatial_lens.overlays import NO_DATA_COLOUR, UTILISATION_LEGEND, Colouring, LegendEntry, RackValue
+from netbox_spatial_lens.overlays import (
+    NO_DATA_COLOUR,
+    UTILISATION_LEGEND,
+    BuiltinColouring,
+    Colouring,
+    LegendEntry,
+    RackValue,
+    Registry,
+)
 from netbox_spatial_lens.palette import (
     COMPLETION,
     NO_ROLE,
@@ -28,16 +35,15 @@ from netbox_spatial_lens.palette import (
 )
 
 __all__ = (
+    'BUILTIN_DEVICE_OVERLAYS',
     'DeviceOverlay',
     'get_device_overlay',
     'get_device_overlays',
     'register_builtin_device_overlays',
     'register_device_overlay',
+    'registry',
+    'resolve_device_overlay',
 )
-
-logger = logging.getLogger('netbox.plugins.netbox_spatial_lens.device_overlays')
-
-_registry: dict[str, 'DeviceOverlay'] = {}
 
 
 class DeviceOverlay(Colouring):
@@ -50,33 +56,6 @@ class DeviceOverlay(Colouring):
     @staticmethod
     def item_key(item) -> int:
         return item.device.pk
-
-
-def register_device_overlay(
-    name: str,
-    label: str,
-    fn: Callable,
-    description: str = '',
-    legend: list[LegendEntry] | None = None,
-) -> DeviceOverlay:
-    """
-    Make a device colouring selectable on every rack.
-
-    `name` is the key used in the URL, so a coloured rack is a link somebody can send. Keep it
-    stable and change the label freely.
-    """
-    if name in _registry:
-        logger.warning(f'Device overlay "{name}" is already registered; the later registration wins.')
-    _registry[name] = DeviceOverlay(name, label, fn, description, list(legend or []))
-    return _registry[name]
-
-
-def get_device_overlays() -> list[DeviceOverlay]:
-    return list(_registry.values())
-
-
-def get_device_overlay(name: str) -> DeviceOverlay | None:
-    return _registry.get(name)
 
 
 # --------------------------------------------------------------------------------------
@@ -193,27 +172,24 @@ def power_overlay(mounted: Sequence) -> dict[int, RackValue]:
     return values
 
 
-BUILTIN_DEVICE_OVERLAYS: dict[str, tuple[str, Callable, str, list]] = {
-    'role': ('Role', role_overlay, 'The device role, in its own colour.', []),
-    'status': ('Status', status_overlay, 'What is live, staged, failed or planned.', []),
-    'tenant': ('Tenant', tenant_overlay, 'Who owns each device.', []),
-    'cabling': ('Cabling', cabling_overlay, 'How much of each device is plugged in.', CABLING_LEGEND),
-    'power': ('Power', power_overlay, 'Allocated draw against the device maximum.', UTILISATION_LEGEND),
+BUILTIN_DEVICE_OVERLAYS = {
+    'role': BuiltinColouring('Role', role_overlay, 'The device role, in its own colour.'),
+    'status': BuiltinColouring('Status', status_overlay, 'What is live, staged, failed or planned.'),
+    'tenant': BuiltinColouring('Tenant', tenant_overlay, 'Who owns each device.'),
+    'cabling': BuiltinColouring('Cabling', cabling_overlay, 'How much of each device is plugged in.', CABLING_LEGEND),
+    'power': BuiltinColouring('Power', power_overlay, 'Allocated draw against the device maximum.', UTILISATION_LEGEND),
 }
 
-
-def register_builtin_device_overlays(names: list[str] | None = None) -> None:
-    """
-    Register the built-in device overlays, all of them or the named subset.
-
-    An unrecognised name is logged and skipped rather than raised, so a typo in the plugin
-    configuration cannot stop NetBox from booting.
-    """
-    if names is None:
-        names = list(BUILTIN_DEVICE_OVERLAYS)
-    for name in names:
-        if name not in BUILTIN_DEVICE_OVERLAYS:
-            logger.warning(f'Unknown built-in device overlay "{name}"; skipped.')
-            continue
-        label, fn, description, legend = BUILTIN_DEVICE_OVERLAYS[name]
-        register_device_overlay(name, label, fn, description=description, legend=legend)
+# The rack view's colourings. The functions below are the names other plugins register with.
+registry = Registry(
+    kind=DeviceOverlay,
+    noun='Device overlay',
+    default_setting='default_device_overlay',
+    builtins_setting='enable_builtin_device_overlays',
+    builtins=BUILTIN_DEVICE_OVERLAYS,
+)
+register_device_overlay = registry.register
+get_device_overlays = registry.all
+get_device_overlay = registry.get
+resolve_device_overlay = registry.resolve
+register_builtin_device_overlays = registry.register_builtins

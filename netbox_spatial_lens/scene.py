@@ -345,6 +345,10 @@ def _facts(mounted, ports: bool) -> list[str]:
     facts = [str(device.device_type), f'U{float(device.position):g} · mounted {mounted.face}']
     if device.asset_tag:
         facts.insert(0, f'Asset tag {device.asset_tag}')
+    # What the colouring says about the device, first: a band's colour alone cannot say "3 of 48
+    # cabled" or the day its support ends, and the floor's hover card names its reading too.
+    if mounted.value is not None and mounted.value.has_data:
+        facts.insert(0, mounted.value.label)
     if ports:
         facts.append(f'{mounted.connected_count} of {mounted.port_count} ports connected')
     return facts

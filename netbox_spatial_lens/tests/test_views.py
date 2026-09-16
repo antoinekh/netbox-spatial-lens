@@ -2,18 +2,23 @@
 The pages render, and they tell the truth about what they could not answer.
 """
 
+import copy
+from unittest import mock
+
 from core.models import ObjectType
 from dcim.models import Site
+from django.conf import settings
 from django.db import connection, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from users.models import User
 from utilities.testing import create_test_user
 
 from netbox_spatial_lens.models import Floor
-from netbox_spatial_lens.palette import NO_DATA, categorical_colour
-from netbox_spatial_lens.site_overlays import distinct_colours, get_site_overlay, get_site_overlays
+from netbox_spatial_lens.overlays import RackValue
+from netbox_spatial_lens.palette import NO_DATA, categorical_colour, distinct_colours
+from netbox_spatial_lens.site_overlays import SiteOverlay, get_site_overlay, get_site_overlays
 from netbox_spatial_lens.tests.base import (
     LensTestCase,
     make_device,
@@ -356,6 +361,30 @@ class WorldViewTest(ViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['overlay'].name, 'group')
 
+    def test_a_default_no_colouring_answers_to_falls_back_to_the_first_registered(self):
+        # The map used to fall back to the group inside the builder only, so it was drawn by
+        # group while the page named no colouring and no button was active.
+        config = copy.deepcopy(settings.PLUGINS_CONFIG)
+        config['netbox_spatial_lens']['default_site_overlay'] = 'no-such-default'
+        with override_settings(PLUGINS_CONFIG=config):
+            response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
+        self.assertEqual(response.context['overlay'].name, get_site_overlays()[0].name)
+
+    def test_with_the_default_colouring_switched_off_the_map_uses_the_first_left(self):
+        # `enable_builtin_site_overlays: ['status']` with the default left at 'group': the map
+        # used to be drawn by nothing while Status sat on the toolbar.
+        from netbox_spatial_lens import site_overlays
+
+        self.site.latitude, self.site.longitude = 51.5, -0.12
+        self.site.status = 'planned'
+        self.site.save()
+        with mock.patch.dict(site_overlays.registry._items, clear=True):
+            site_overlays.register_builtin_site_overlays(['status'])
+            response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
+            node = next(n for n in build_world().nodes if n.object_id == self.site.pk)
+        self.assertEqual(response.context['overlay'].name, 'status')
+        self.assertEqual(node.band, self.site.get_status_display())
+
 
 class TraceViewTest(ViewTestCase):
     def test_an_unknown_termination_is_a_404_not_a_500(self):
@@ -452,6 +481,30 @@ class WorldColouringTest(LensTestCase):
         node = next(n for n in build_world().nodes if n.object_id == site.pk)
         self.assertEqual(node.band, 'Branch Offices')
         self.assertEqual(node.colour, categorical_colour('Branch Offices'))
+
+    def test_the_hover_card_names_what_the_colouring_says(self):
+        site = Site.objects.create(name='Owned', slug='owned', latitude=51.5, longitude=-0.1)
+
+        def owner(sites):
+            return {s.pk: RackValue('#3f7fbf', 'Paid by Acme', 'acme') for s in sites}
+
+        world = build_world(overlay=SiteOverlay('owner', 'Owner', owner))
+        node = next(n for n in world.nodes if n.object_id == site.pk)
+        self.assertEqual(node.facts[0], ('Owner', 'Paid by Acme'))
+
+    def test_coloured_by_status_the_status_is_not_named_twice(self):
+        # The status is the card's badge already.
+        site = Site.objects.create(name='Live', slug='live', latitude=51.5, longitude=-0.1)
+        node = next(n for n in build_world(overlay=get_site_overlay('status')).nodes if n.object_id == site.pk)
+        self.assertNotIn(('Status', site.get_status_display()), node.facts)
+
+    def test_coloured_by_group_the_group_is_not_named_twice(self):
+        from dcim.models import SiteGroup
+
+        group = SiteGroup.objects.create(name='Europe', slug='europe')
+        site = Site.objects.create(name='Grouped', slug='grouped', group=group, latitude=51.5, longitude=-0.1)
+        node = next(n for n in build_world(overlay=get_site_overlay('group')).nodes if n.object_id == site.pk)
+        self.assertEqual([fact for fact in node.facts if fact[1] == 'Europe'], [('Group', 'Europe')])
 
     def test_the_map_colours_by_the_colouring_it_is_given(self):
         site = Site.objects.create(name='Planned', slug='planned', status='planned', latitude=51.5, longitude=-0.1)

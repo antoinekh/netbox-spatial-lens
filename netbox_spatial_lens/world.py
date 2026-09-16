@@ -19,7 +19,7 @@ from django.urls import reverse
 from netbox_spatial_lens.overlays import NO_DATA_COLOUR as NO_DATA
 from netbox_spatial_lens.overlays import NO_DATA_LABEL, LegendEntry, Stat
 from netbox_spatial_lens.palette import NODE, distinct_colours
-from netbox_spatial_lens.site_overlays import get_site_overlay
+from netbox_spatial_lens.site_overlays import resolve_site_overlay
 
 __all__ = (
     'WorldLink',
@@ -148,10 +148,11 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
     rack_counts = {pk: row['n_racks'] for pk, row in counted.items()}
     busiest = max(rack_counts.values() or [1]) or 1
 
-    # The site group is the default because it is how an estate is usually organised. A
-    # deployment that switches every built-in colouring off still gets a map: the points keep
-    # the plain site blue and the legend explains only the provider networks.
-    overlay = overlay or get_site_overlay('group')
+    # With none given, the same colouring the page would pick: the configured default, which is
+    # the site group, else the first registered. A deployment that switches every colouring off
+    # still gets a map: the points keep the plain site blue and the legend explains only the
+    # provider networks.
+    overlay = overlay or resolve_site_overlay(None)
     values = overlay.evaluate(sites) if overlay else {}
 
     nodes = {}
@@ -179,7 +180,7 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
             lat=float(site.latitude),
             lon=float(site.longitude),
             status=site.get_status_display(),
-            facts=_site_facts(site, counted.get(site.pk, {})),
+            facts=_site_facts(site, counted.get(site.pk, {}), overlay, values.get(site.pk)),
         )
 
     links = _build_links(nodes, circuits)
@@ -319,14 +320,19 @@ def _world_stats(
     return stats
 
 
-def _site_facts(site, counts: Mapping) -> list[tuple[str, str]]:
+def _site_facts(site, counts: Mapping, overlay=None, value=None) -> list[tuple[str, str]]:
     """
     The lines under a site's name on hover.
 
     Only what is actually recorded: an empty field is left out rather than shown as a dash,
     because a hover card padded with blanks reads as an inventory in worse shape than it is.
+
+    The colouring's reading comes first, as the floor's hover card names it too, unless the card
+    already says it: coloured by group, the group is on its own line, and the status is the badge.
     """
     facts = []
+    if overlay is not None and value is not None and value.has_data:
+        facts.append((overlay.label, value.label))
     if site.region:
         facts.append(('Region', str(site.region)))
     if site.group:
@@ -338,6 +344,10 @@ def _site_facts(site, counts: Mapping) -> list[tuple[str, str]]:
     if site.physical_address:
         # First line only: a hover card is not the place for a postal address.
         facts.append(('Address', site.physical_address.splitlines()[0]))
+    if facts and value is not None and value.has_data:
+        said = {text for _, text in facts[1:]} | {site.get_status_display()}
+        if value.label in said:
+            facts.pop(0)
     return facts
 
 

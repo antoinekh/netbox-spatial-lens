@@ -1,4 +1,4 @@
-# netbox-spatial-lens, plus netbox-branching when the stack is started with it.
+# netbox-spatial-lens, plus the extending examples and netbox-branching when the stack is started with them.
 #
 # Branching is off by default: the plugin does not depend on it, and leaving it out keeps the
 # stack close to a plain NetBox. `make up BRANCHING=true` turns it on, which is how the plugin
@@ -9,11 +9,15 @@ import sys
 PLUGINS = ['netbox_spatial_lens']
 
 PLUGINS_CONFIG = {
-    'netbox_spatial_lens': {
-        # The demo's rack and device custom field, offered as a filter like tags.
-        'filter_custom_fields': ['compliancy'],
-    },
+    'netbox_spatial_lens': {},
 }
+
+# The extending examples, off by default so the stack shows the plugin as installed: the
+# colourings from docs/extending.md, and the demo's rack and device custom field offered as a
+# filter. `make up EXAMPLES=true` turns them on; listed after the plugin they extend.
+if os.environ.get('LENS_EXAMPLES', 'false').lower() == 'true':
+    PLUGINS.append('lens_examples')
+    PLUGINS_CONFIG['netbox_spatial_lens']['filter_custom_fields'] = ['compliancy']
 
 if os.environ.get('NETBOX_BRANCHING', 'false').lower() == 'true':
     from netbox_branching.utilities import DynamicSchemaDict

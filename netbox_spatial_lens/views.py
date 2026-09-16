@@ -22,7 +22,7 @@ from utilities.views import ViewTab, register_model_view
 
 from netbox_spatial_lens import filtersets, forms, tables
 from netbox_spatial_lens.cabling import kind_legend
-from netbox_spatial_lens.device_overlays import get_device_overlay, get_device_overlays
+from netbox_spatial_lens.device_overlays import get_device_overlays, resolve_device_overlay
 from netbox_spatial_lens.elevation import build_elevation, rack_summary
 from netbox_spatial_lens.field_filters import cells_for, field_filters
 from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs, cabling_legend
@@ -49,7 +49,7 @@ from netbox_spatial_lens.palette import (
 )
 from netbox_spatial_lens.ports import rack_allocation
 from netbox_spatial_lens.scene import build_scene
-from netbox_spatial_lens.site_overlays import get_site_overlay, get_site_overlays
+from netbox_spatial_lens.site_overlays import get_site_overlays, resolve_site_overlay
 from netbox_spatial_lens.tags import tags_in_use
 from netbox_spatial_lens.templatetags.lens import lens_static
 from netbox_spatial_lens.tracing import trace_from
@@ -333,11 +333,7 @@ class RackLensView(generic.ObjectView):
         # somebody can send. An unknown name falls back rather than failing, the same way an
         # unknown floor overlay does.
         overlays = get_device_overlays()
-        overlay = (
-            get_device_overlay(request.GET.get('colour'))
-            or get_device_overlay(get_plugin_config('netbox_spatial_lens', 'default_device_overlay'))
-            or (overlays[0] if overlays else None)
-        )
+        overlay = resolve_device_overlay(request.GET.get('colour'))
         # Custom fields offered as filters, like tags.
         filters = field_filters((m.device for m in devices), Device)
         for mounted in devices:
@@ -413,9 +409,8 @@ class WorldView(generic.ObjectListView):
     def get(self, request):
         # An unknown name falls back rather than failing: a shared link carrying a colouring a
         # later release removed should still open the map, which is how the floor behaves too.
-        overlay = get_site_overlay(request.GET.get('overlay')) or get_site_overlay(
-            get_plugin_config('netbox_spatial_lens', 'default_site_overlay')
-        )
+        # Resolved once, here, so the map and the toolbar name the same colouring.
+        overlay = resolve_site_overlay(request.GET.get('overlay'))
         world = build_world(
             self.queryset,
             overlay=overlay,

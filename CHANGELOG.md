@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Docs:** `extending.md` covers colourings and custom field filters together, with a tested example and a capture for each level.
+
 ## v0.3.0 (2026-09-15)
 
 - **Renamed:** the plugin is now NetBox Spatial Lens. Install `netbox-spatial-lens`, and use `netbox_spatial_lens` in `PLUGINS` and `PLUGINS_CONFIG`. The URLs move to `/plugins/spatial-lens/` and `/api/plugins/spatial-lens/`, the rack and site tabs to `spatial-lens/`, the permissions to `netbox_spatial_lens.*`, and the commands to `lens_enrich` and `lens_autoplace`. The migrations were rewritten under the new name, so an existing install must drop its `netbox_atlas_*` tables and migrate again.

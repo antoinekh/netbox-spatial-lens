@@ -96,7 +96,7 @@ For the development stack, the demo database, and the commands that populate it,
 |---|---|
 | [Compatibility](COMPATIBILITY.md) | Which NetBox versions each release supports |
 | [Configuration](docs/configuration.md) | Every setting, and a site with no internet access |
-| [Extending](docs/extending.md) | Adding a colouring from another plugin, and the floor layout API |
+| [Extending](docs/extending.md) | Colouring from another plugin, filtering by custom fields, and the floor layout API |
 | [Modules](docs/modules.md) | What each module and script holds |
 | [Permissions](docs/permissions.md) | What to grant, and what each page reads |
 | [Development](docs/development.md) | The dev stack, the demo database, and the commands that fill it |

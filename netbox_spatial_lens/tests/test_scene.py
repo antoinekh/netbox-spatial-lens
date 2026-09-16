@@ -90,6 +90,20 @@ class DeviceBoxTest(LensTestCase):
         filters = _device(_scene(self.rack), device).filters
         self.assertEqual(sorted(filters['device-tags'].split()), ['blue', 'core'])
 
+    def test_the_hover_card_names_what_the_colouring_says_first(self):
+        from netbox_spatial_lens.device_overlays import get_device_overlay
+
+        device = make_device(self.site, self.rack, 'coloured', self.role, self.manufacturer)
+        elevation = build_elevation(self.rack)
+        mounted = elevation.devices[0]
+        mounted.value = get_device_overlay('role').evaluate(elevation.devices)[device.pk]
+        facts = _device(build_scene(elevation), device).facts
+        self.assertEqual(facts[0], self.role.name)
+
+    def test_a_device_the_colouring_has_no_answer_for_adds_no_line(self):
+        device = make_device(self.site, self.rack, 'plain', self.role, self.manufacturer)
+        self.assertEqual(_device(_scene(self.rack), device).facts[0], str(device.device_type))
+
     def test_the_json_names_the_device(self):
         device = make_device(self.site, self.rack, 'named', self.role, self.manufacturer)
         entry = _scene(self.rack).as_json()['devices'][0]

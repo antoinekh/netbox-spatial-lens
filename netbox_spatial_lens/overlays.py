@@ -20,15 +20,22 @@ import logging
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
+from netbox.plugins import get_plugin_config
+
 from netbox_spatial_lens.palette import COOLING, NO_DATA, UTILISATION, utilisation_colour
 
 __all__ = (
     'BUILTIN_OVERLAYS',
+    'NO_DATA_COLOUR',
     'NO_DATA_KEY',
+    'NO_DATA_LABEL',
+    'UTILISATION_LEGEND',
+    'BuiltinColouring',
     'Colouring',
     'LegendEntry',
     'Overlay',
     'RackValue',
+    'Registry',
     'Stat',
     'band_key',
     'build_legend',
@@ -38,6 +45,9 @@ __all__ = (
     'get_overlays',
     'register_builtin_overlays',
     'register_overlay',
+    'registry',
+    'resolve_colouring',
+    'resolve_overlay',
 )
 
 logger = logging.getLogger('netbox.plugins.netbox_spatial_lens.overlays')
@@ -48,9 +58,6 @@ NO_DATA_COLOUR = NO_DATA
 NO_DATA_LABEL = 'No data'
 # The band key of the no-data entry. Not a colour and not a label, so no named band can take it.
 NO_DATA_KEY = 'lens:no-data'
-
-# name -> Overlay
-_registry: dict[str, 'Overlay'] = {}
 
 
 @dataclass
@@ -209,46 +216,122 @@ def build_legend(declared: Sequence[LegendEntry], values: Iterable[RackValue]) -
     return [*entries, LegendEntry(NO_DATA_COLOUR, NO_DATA_LABEL, tally.get(NO_DATA_KEY, 0), key=NO_DATA_KEY)]
 
 
-def register_overlay(
-    name: str,
-    label: str,
-    fn: Callable,
-    description: str = '',
-    legend: list[LegendEntry] | None = None,
-) -> 'Overlay':
+def resolve_colouring(colourings: Sequence[Colouring], name: str | None, default: str | None) -> Colouring | None:
     """
-    Make an overlay selectable on every floor.
+    The colouring to draw with: the one named, else the default, else the first registered.
 
-    `name` is the key used in the URL, so it survives in a shared link; keep it stable and
-    change the label freely.
+    Shared by the floor, the rack and the map rather than written three times: the map once had
+    its own copy with no last step, so a deployment that switched the default colouring off got
+    a map coloured by nothing while the other colourings sat on the toolbar.
+
+    An unknown name falls back rather than raising, so a link carrying a colouring a later
+    release removed, or a typo in the setting, still opens the drawing. None only when nothing
+    is registered at all.
     """
-    if name in _registry:
-        logger.warning(f'Overlay "{name}" is already registered; the later registration wins.')
-    _registry[name] = Overlay(
-        name=name,
-        label=label,
-        fn=fn,
-        description=description,
-        legend=list(legend or []),
-    )
-    return _registry[name]
+    by_name = {colouring.name: colouring for colouring in colourings}
+    return by_name.get(name) or by_name.get(default) or (colourings[0] if colourings else None)
 
 
-def get_overlays() -> list['Overlay']:
+@dataclass(frozen=True)
+class BuiltinColouring:
     """
-    Every registered overlay, in registration order.
+    A colouring that ships with the plugin, registered under its name unless the settings leave
+    it out.
     """
-    return list(_registry.values())
+
+    label: str
+    fn: Callable
+    description: str
+    legend: Sequence[LegendEntry] = ()
 
 
-def get_overlay(name: str) -> 'Overlay | None':
+@dataclass
+class Registry[C: Colouring]:
     """
-    One overlay by name, or None.
+    The colourings of one level, by name, in registration order.
 
-    Callers fall back rather than raising: a link carrying an overlay name that a later
-    release removed should still open the floor.
+    One class for the floor, the rack and the map rather than three copies of the same
+    functions: the copies had already drifted, and the map's fallback was the one that lost a
+    step. A level differs only in the type of colouring it holds and the two settings it reads.
     """
-    return _registry.get(name)
+
+    kind: type[C]
+    # What a log line calls one of these.
+    noun: str
+    # The plugin settings naming the default colouring, and which built-ins to offer.
+    default_setting: str
+    builtins_setting: str
+    builtins: dict[str, BuiltinColouring] = field(default_factory=dict)
+    _items: dict[str, C] = field(default_factory=dict, repr=False)
+
+    def register(
+        self,
+        name: str,
+        label: str,
+        fn: Callable,
+        description: str = '',
+        legend: Sequence[LegendEntry] | None = None,
+    ) -> C:
+        """
+        Make a colouring selectable on every drawing of this level.
+
+        `name` is the key used in the URL, so it survives in a shared link; keep it stable and
+        change the label freely. A name registered twice keeps the later registration, which is
+        how another plugin replaces a built-in.
+        """
+        if name in self._items:
+            logger.warning(f'{self.noun} "{name}" is already registered; the later registration wins.')
+        self._items[name] = self.kind(
+            name=name,
+            label=label,
+            fn=fn,
+            description=description,
+            legend=list(legend or []),
+        )
+        return self._items[name]
+
+    def all(self) -> list[C]:
+        """
+        Every registered colouring, in registration order.
+        """
+        return list(self._items.values())
+
+    def get(self, name: str | None) -> C | None:
+        """
+        One colouring by name, or None.
+
+        Callers fall back rather than raising: a link carrying a name that a later release
+        removed should still open the drawing. See `resolve`.
+        """
+        return self._items.get(name) if name else None
+
+    def resolve(self, name: str | None) -> C | None:
+        """
+        The colouring to draw with, given whatever the URL asked for. See `resolve_colouring`.
+        """
+        return resolve_colouring(self.all(), name, get_plugin_config('netbox_spatial_lens', self.default_setting))
+
+    def register_builtins(self, names: Iterable[str] | None = None) -> None:
+        """
+        Register the built-in colourings, all of them or the named subset.
+
+        An unrecognised name is logged and skipped rather than raised, so a typo in the plugin
+        configuration cannot stop NetBox from booting.
+        """
+        for name in self.builtins if names is None else names:
+            builtin = self.builtins.get(name)
+            if builtin is None:
+                logger.warning(f'Unknown built-in {self.noun.lower()} "{name}" in {self.builtins_setting}; skipped.')
+                continue
+            self.register(name, builtin.label, builtin.fn, description=builtin.description, legend=builtin.legend)
+
+    def register_configured_builtins(self) -> None:
+        """
+        Register the built-ins the settings ask for: True for all, False for none, or a list.
+        """
+        selection = get_plugin_config('netbox_spatial_lens', self.builtins_setting)
+        if selection:
+            self.register_builtins(selection if isinstance(selection, (list, tuple, set)) else None)
 
 
 # --------------------------------------------------------------------------------------
@@ -494,45 +577,32 @@ def role_overlay(racks: Sequence) -> dict[int, RackValue]:
 
 
 BUILTIN_OVERLAYS = {
-    'power': (
+    'power': BuiltinColouring(
         'Power',
         power_overlay,
         'How close each rack is to the capacity of the feeds supplying it.',
         UTILISATION_LEGEND,
     ),
-    'cooling': (
+    'cooling': BuiltinColouring(
         'Cooling',
         cooling_overlay,
         'What each rack can be cooled by, and how much heat it can shed.',
         COOLING_LEGEND,
     ),
-    'space': (
-        'Space',
-        space_overlay,
-        'How much of each rack is filled.',
-        UTILISATION_LEGEND,
-    ),
-    'role': (
-        'Role',
-        role_overlay,
-        'The rack role, in its own colour.',
-        [],
-    ),
+    'space': BuiltinColouring('Space', space_overlay, 'How much of each rack is filled.', UTILISATION_LEGEND),
+    'role': BuiltinColouring('Role', role_overlay, 'The rack role, in its own colour.'),
 }
 
-
-def register_builtin_overlays(names: list[str] | None = None) -> None:
-    """
-    Register the built-in overlays, all of them or the named subset.
-
-    An unrecognised name is logged and skipped rather than raised, so a typo in the plugin
-    configuration cannot stop NetBox from booting.
-    """
-    if names is None:
-        names = list(BUILTIN_OVERLAYS)
-    for name in names:
-        if name not in BUILTIN_OVERLAYS:
-            logger.warning(f'Unknown built-in overlay "{name}" in enable_builtin_overlays; skipped.')
-            continue
-        label, fn, description, legend = BUILTIN_OVERLAYS[name]
-        register_overlay(name, label, fn, description=description, legend=legend)
+# The floor's colourings. The functions below are the names other plugins register with.
+registry = Registry(
+    kind=Overlay,
+    noun='Overlay',
+    default_setting='default_overlay',
+    builtins_setting='enable_builtin_overlays',
+    builtins=BUILTIN_OVERLAYS,
+)
+register_overlay = registry.register
+get_overlays = registry.all
+get_overlay = registry.get
+resolve_overlay = registry.resolve
+register_builtin_overlays = registry.register_builtins

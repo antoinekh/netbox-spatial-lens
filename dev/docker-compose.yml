@@ -12,9 +12,11 @@
 x-netbox: &netbox
   image: netboxcommunity/netbox:v4.7.0
   environment:
-    PYTHONPATH: /opt/netbox/plugins/netbox-spatial-lens:/opt/netbox/plugins/netbox-branching
-    # Read by dev/configuration/plugins.py. `make up BRANCHING=true` sets it.
+    # dev/ holds lens_examples, the colourings from docs/extending.md.
+    PYTHONPATH: /opt/netbox/plugins/netbox-spatial-lens:/opt/netbox/plugins/netbox-spatial-lens/dev:/opt/netbox/plugins/netbox-branching
+    # Read by dev/configuration/plugins.py. `make up BRANCHING=true` and `make up EXAMPLES=true` set them.
     NETBOX_BRANCHING: ${NETBOX_BRANCHING:-false}
+    LENS_EXAMPLES: ${LENS_EXAMPLES:-false}
     DEVELOPER: "true"
     SKIP_SUPERUSER: "false"
     SUPERUSER_NAME: "admin"

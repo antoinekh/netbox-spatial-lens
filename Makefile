@@ -8,7 +8,9 @@ NETBOX_DOCKER   := ../netbox-docker
 DEMO_SQL        := ../netbox-demo-data/sql/netbox-demo-v4.7.sql
 # Start the stack with netbox-branching alongside the plugin: `make up BRANCHING=true`.
 BRANCHING       ?= false
-RUN := cd $(NETBOX_DOCKER) && NETBOX_BRANCHING=$(BRANCHING) docker compose -p $(COMPOSE_PROJECT) -f docker-compose.yml -f ../netbox-spatial-lens/dev/docker-compose.yml
+# Start the stack with the colourings from docs/extending.md registered: `make up EXAMPLES=true`.
+EXAMPLES        ?= false
+RUN := cd $(NETBOX_DOCKER) && NETBOX_BRANCHING=$(BRANCHING) LENS_EXAMPLES=$(EXAMPLES) docker compose -p $(COMPOSE_PROJECT) -f docker-compose.yml -f ../netbox-spatial-lens/dev/docker-compose.yml
 EXEC := $(RUN) exec -T netbox /opt/netbox/venv/bin/python /opt/netbox/netbox/manage.py
 
 .DEFAULT_GOAL := help
@@ -67,6 +69,10 @@ enrich:  ## Fill in the fields the demo data leaves blank, so the views have som
 .PHONY: autoplace
 autoplace:  ## Create a floor per site and lay its racks out in rows
 	$(EXEC) lens_autoplace
+
+.PHONY: examples
+examples:  ## Fill in the custom fields the extending examples colour by (needs `make up EXAMPLES=true`)
+	$(EXEC) lens_examples_data
 
 .PHONY: test
 test:  ## Run the plugin test suite inside the container

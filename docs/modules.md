@@ -11,7 +11,7 @@ What each part of the plugin holds. The Python modules are under `netbox_spatial
 | `floor_scene` | A floor in millimetres for the 3D drawing: cabinets, the arcs between racks and the cabling to the walls, and each rack's devices for the Devices view |
 | `cabling` / `ports` / `power` / `floor_cabling` | Resolved in bulk, never per object |
 | `tracing` | Following a path end to end, and a power chain past the PDU |
-| `overlays` / `device_overlays` / `site_overlays` | The colouring registries and their built-ins |
+| `overlays` / `device_overlays` / `site_overlays` | The colourings of each level and their built-ins. `overlays` also holds what the three share: the `Registry`, the legend rules and which colouring a page opens with |
 | `palette` | Every colour that carries meaning, in one place |
 | `tags` | The tags in use on a floor or in a rack, for the Tags finder |
 | `field_filters` | Custom fields offered as filters, the way tags are |
@@ -31,4 +31,4 @@ What each part of the plugin holds. The Python modules are under `netbox_spatial
 | `editor.js` | Dragging and saving a placement |
 | `lens.css` | The styles of every page, drawn from the palette's CSS variables |
 
-To add a colouring from another plugin, or to read a floor through the REST API, see [extending.md](extending.md).
+To add a colouring from another plugin, filter by custom fields, or read a floor through the REST API, see [extending.md](extending.md).

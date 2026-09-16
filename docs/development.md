@@ -75,6 +75,18 @@ manage.py lens_autoplace ncsu-065 --per-location
 
 In the demo data, `MDF` is the site worth looking at: 26 racks, of which 24 are in three rows of eight. With `--per-location` it becomes four rooms, which is what the site page is for.
 
+## The extending examples
+
+`make up EXAMPLES=true` starts the stack with `dev/lens_examples`, a plugin that reads the examples out of [extending.md](extending.md) and registers them: **Heat** on the floor, **Support** in the rack view and **Tier** on the world map. It also offers the demo's `compliancy` custom field as a filter. Without the flag, the stack shows only what the plugin ships.
+
+```bash
+make up EXAMPLES=true   # the stack, with the examples registered
+make static             # again: recreating the containers drops the collected files
+make examples           # create heat_load_kw, support_end and service_tier, and fill them in
+```
+
+`make examples` never overwrites a value, and takes the same seed each run. `make test` runs inside the running stack, so with the examples on, the suite also sees their colourings.
+
 ## Branching
 
 The dev stack leaves [netbox-branching](https://github.com/netboxlabs/netbox-branching) out by default. `make up BRANCHING=true` mounts a sibling `netbox-branching` checkout and enables it, and `make test` then also runs `tests/test_branching.py`, which is skipped without it.

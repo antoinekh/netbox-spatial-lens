@@ -12,7 +12,6 @@ from dataclasses import dataclass
 
 from dcim.models import Device, Rack
 from django.db.models import Count
-from netbox.plugins import get_plugin_config
 
 from netbox_spatial_lens.geometry import PlacedRack, natural_key, rack_footprint_cm, size_labels
 from netbox_spatial_lens.models import RackPlacement
@@ -21,8 +20,7 @@ from netbox_spatial_lens.overlays import (
     Stat,
     floor_power_utilisation,
     floor_space_utilisation,
-    get_overlay,
-    get_overlays,
+    resolve_overlay,
 )
 from netbox_spatial_lens.palette import utilisation_colour
 
@@ -35,20 +33,6 @@ __all__ = (
     'resolve_overlay',
     'unplaced_racks',
 )
-
-
-def resolve_overlay(name: str | None):
-    """
-    The overlay to draw with, given whatever the URL asked for.
-
-    An unknown name falls back rather than raising: a link carrying an overlay a later release
-    removed, or a typo, should still open the floor. The configured default is tried next, and
-    the first registered overlay after that, so a floor always renders with something.
-    """
-    overlays = get_overlays()
-    if not overlays:
-        return None
-    return get_overlay(name) or get_overlay(get_plugin_config('netbox_spatial_lens', 'default_overlay')) or overlays[0]
 
 
 def build_layout(floor, overlay, racks=None, devices=None) -> list[PlacedRack]:

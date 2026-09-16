@@ -7,7 +7,7 @@ Every setting is optional. Set them under `PLUGINS_CONFIG['netbox_spatial_lens']
 | `default_rack_width` | `600` | Width in millimetres used for a rack with no outer width recorded. Such a rack is marked as estimated. |
 | `default_rack_depth` | `1070` | Depth in millimetres used for a rack with no outer depth recorded. |
 | `grid_size` | `10` | Grid the layout editor snaps to, in centimetres. `0` turns snapping off. |
-| `filter_custom_fields` | `[]` | Custom fields to offer as filters, the way tags are: a list of field names. See below. |
+| `filter_custom_fields` | `[]` | Custom fields to offer as filters, the way tags are: a list of field names. See [Filter by](extending.md#filter-by). |
 | `enable_builtin_overlays` | `True` | Floor colourings to offer: `True` for all, `False` for none, or a list from `'power'`, `'cooling'`, `'space'`, `'role'`. |
 | `default_overlay` | `'power'` | Floor colouring used when the URL names none. |
 | `enable_builtin_device_overlays` | `True` | Rack colourings to offer: `True`, `False`, or a list from `'role'`, `'status'`, `'tenant'`, `'cabling'`, `'power'`. |
@@ -23,22 +23,7 @@ Every setting is optional. Set them under `PLUGINS_CONFIG['netbox_spatial_lens']
 
 A name in a URL that no colouring answers to falls back to the default, and then to the first colouring registered, so an old link still opens.
 
-## Custom fields as filters
-
-A select or multiselect custom field can narrow the floor and the rack view the way tags do:
-
-```python
-PLUGINS_CONFIG = {
-    'netbox_spatial_lens': {
-        'filter_custom_fields': ['compliancy'],
-    },
-}
-```
-
-- On the floor, a field assigned to racks gets a button beside **Tags**. It lists the values in use, with how many racks carry each, in the colours of the field's choice set. Tick values to narrow the plan and the rack table to the racks with any of them. The table also gets a column for the field, and the hover card names the rack's values.
-- In the rack view, a field assigned to devices does the same for the devices.
-- Ticks combine with the Tags filter, the find box and the legend, are kept in the URL, and Escape clears them.
-- Other field types, and fields hidden in the UI, are skipped.
+To add a colouring of your own, or to filter by custom fields, see [Extending](extending.md).
 
 ## A site with no internet access
 

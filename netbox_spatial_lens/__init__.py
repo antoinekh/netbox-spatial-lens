@@ -73,28 +73,15 @@ class SpatialLensConfig(PluginConfig):
     def ready(self) -> None:
         super().ready()
 
-        from netbox.plugins import get_plugin_config
+        from . import (
+            device_overlays,
+            overlays,
+            signals,  # noqa: F401  (connects the receivers)
+            site_overlays,
+        )
 
-        from . import signals  # noqa: F401  (connects the receivers)
-        from .device_overlays import register_builtin_device_overlays
-        from .overlays import register_builtin_overlays
-        from .site_overlays import register_builtin_site_overlays
-
-        selection = get_plugin_config('netbox_spatial_lens', 'enable_builtin_overlays')
-        if selection:
-            register_builtin_overlays(list(selection) if isinstance(selection, (list, tuple, set)) else None)
-
-        device_selection = get_plugin_config('netbox_spatial_lens', 'enable_builtin_device_overlays')
-        if device_selection:
-            register_builtin_device_overlays(
-                list(device_selection) if isinstance(device_selection, (list, tuple, set)) else None
-            )
-
-        site_selection = get_plugin_config('netbox_spatial_lens', 'enable_builtin_site_overlays')
-        if site_selection:
-            register_builtin_site_overlays(
-                list(site_selection) if isinstance(site_selection, (list, tuple, set)) else None
-            )
+        for level in (overlays, device_overlays, site_overlays):
+            level.registry.register_configured_builtins()
 
 
 config = SpatialLensConfig

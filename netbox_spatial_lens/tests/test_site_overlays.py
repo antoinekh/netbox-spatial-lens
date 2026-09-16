@@ -15,10 +15,9 @@ from dcim.models import Region, Site, SiteGroup
 from django.test import TestCase
 from tenancy.models import Tenant
 
-from netbox_spatial_lens.palette import NO_DATA, NODE, categorical_colour
+from netbox_spatial_lens.palette import NO_DATA, NODE, categorical_colour, distinct_colours
 from netbox_spatial_lens.site_overlays import (
     SiteOverlay,
-    distinct_colours,
     get_site_overlay,
     get_site_overlays,
 )
@@ -30,8 +29,9 @@ def make_site(name, **kwargs):
 
 class RegistryTest(TestCase):
     def test_the_four_builtins_are_selectable(self):
+        # First, and in this order. Another installed plugin may register more after them.
         self.assertEqual(
-            [o.name for o in get_site_overlays()],
+            [o.name for o in get_site_overlays()][:4],
             ['group', 'status', 'tenant', 'region'],
         )
 
