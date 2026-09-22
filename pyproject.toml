@@ -24,6 +24,8 @@ classifiers = [
   "Framework :: Django",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Intended Audience :: System Administrators",
   "Environment :: Web Environment",
   "Topic :: System :: Networking",
@@ -32,7 +34,10 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/antoinekh/netbox-spatial-lens"
+Documentation = "https://github.com/antoinekh/netbox-spatial-lens/tree/master/docs"
 Source = "https://github.com/antoinekh/netbox-spatial-lens"
+Changelog = "https://github.com/antoinekh/netbox-spatial-lens/blob/master/CHANGELOG.md"
+Issues = "https://github.com/antoinekh/netbox-spatial-lens/issues"
 
 [tool.setuptools.packages.find]
 include = ["netbox_spatial_lens*"]

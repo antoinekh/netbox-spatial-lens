@@ -102,3 +102,25 @@ make format      # apply ruff fixes
 The suite reuses its database between runs. A test that changes a migration needs it dropped: `make demo-data`.
 
 Every behaviour here is meant to be covered by a test rather than by a paragraph. [Permissions](permissions.md) says which tests cover the permission rules, and the query-count tests in `tests/test_elevation.py` are the guard against a drawing quietly becoming one query per object.
+
+## CI and releases
+
+Three GitHub Actions workflows live in `.github/workflows/`:
+
+| Workflow | Runs on | Does |
+|---|---|---|
+| `lint.yaml` | every pull request and push to `master` | `ruff check` and `ruff format --check`, pinned to the version `make lint` runs |
+| `tests.yaml` | every pull request and push to `master` | the suite on NetBox 4.7.0 with Python 3.12, 3.13 and 3.14, and once more on 3.12 with netbox-branching, against PostgreSQL 17 and Redis 7; also fails on a missing migration |
+| `release.yaml` | a published GitHub release, or by hand | builds the wheel and sdist, runs `twine check`, and publishes to PyPI; a manual run only builds and checks |
+
+The tests job configures NetBox with `testing/configuration.py`. `LENS_BRANCHING=true` adds netbox-branching to it.
+
+To release:
+
+1. Set `version` in `pyproject.toml`, move the `## Unreleased` block of `CHANGELOG.md` under a new version heading, and add the release to `COMPATIBILITY.md`.
+2. Commit, then tag `vX.Y.Z` with the same version and push the tag.
+3. Publish a GitHub release on that tag. `release.yaml` refuses a tag that does not match `pyproject.toml`.
+
+PyPI shows `README.md` as the project page and cannot follow its relative links, so the release job runs `.github/scripts/pypi_readme.py` before the build: the captures and the links to `docs/` point at the release tag on GitHub. The README in the repository keeps its relative links.
+
+Publishing uses [trusted publishing](https://docs.pypi.org/trusted-publishers/): PyPI checks the workflow's identity, and no API token is stored in the repository.

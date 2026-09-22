@@ -1,0 +1,136 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      netbox_ref:
+        description: 'NetBox ref to check out (branch, tag or commit)'
+        required: false
+        default: 'v4.7.0'
+        type: string
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: NetBox ${{ matrix.netbox }} on Python ${{ matrix.python }}${{ matrix.branching && ' with netbox-branching' || '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # The plugin supports the NetBox 4.7 line only (COMPATIBILITY.md). netbox-branching is
+        # optional, so one job adds it to run tests/test_branching.py; the others check the
+        # plugin on a plain NetBox, the way most people install it.
+        include:
+          - netbox: 'v4.7.0'
+            python: '3.12'
+            branching: false
+          - netbox: 'v4.7.0'
+            python: '3.13'
+            branching: false
+          - netbox: 'v4.7.0'
+            python: '3.14'
+            branching: false
+          - netbox: 'v4.7.0'
+            python: '3.12'
+            branching: true
+
+    env:
+      LENS_BRANCHING: ${{ matrix.branching }}
+
+    services:
+      redis:
+        # NetBox 4.7 requires Redis 6.0 or later.
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      postgres:
+        # NetBox needs the ICU collation provider, which the official image provides. 17 is
+        # above the 15 floor NetBox 4.7 sets, and ships the ltree extension 4.7 installs
+        # itself; the GRANT below is what lets it, since installing an extension needs CREATE
+        # on the database.
+        image: postgres:17
+        env:
+          POSTGRES_USER: netbox
+          POSTGRES_PASSWORD: netbox
+          POSTGRES_DB: netbox
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out the plugin
+        uses: actions/checkout@v7
+        with:
+          path: netbox-spatial-lens
+
+      - name: Check out NetBox ${{ matrix.netbox }}
+        uses: actions/checkout@v7
+        with:
+          repository: netbox-community/netbox
+          ref: ${{ inputs.netbox_ref || matrix.netbox }}
+          path: netbox
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install NetBox requirements
+        working-directory: netbox
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install netbox-branching
+        if: matrix.branching
+        # 1.2 is the first release which runs on NetBox 4.7.
+        run: pip install 'netboxlabs-netbox-branching>=1.2,<1.3'
+
+      - name: Install the plugin
+        # Editable, so the tests run from the checkout. test_docs.py runs the examples in
+        # docs/extending.md, and a plain install copies the package into site-packages without
+        # the documentation beside it, where those tests skip. The release workflow builds and
+        # checks the real distribution.
+        run: pip install -e ./netbox-spatial-lens
+
+      - name: Configure NetBox
+        run: |
+          ln -s "$GITHUB_WORKSPACE/netbox-spatial-lens/testing/configuration.py" \
+                "$GITHUB_WORKSPACE/netbox/netbox/netbox/configuration.py"
+
+      - name: Grant the database user permission to create schemas
+        env:
+          PGPASSWORD: netbox
+        run: |
+          # The ltree extension NetBox 4.7 installs on first migrate, and the schema
+          # netbox-branching provisions per branch, both need CREATE on the database.
+          psql -h localhost -U netbox -d netbox -c 'GRANT CREATE ON DATABASE netbox TO netbox;'
+
+      - name: Check for missing migrations
+        working-directory: netbox
+        run: python netbox/manage.py makemigrations netbox_spatial_lens --check --dry-run
+
+      - name: Run the test suite
+        working-directory: netbox
+        run: python netbox/manage.py test netbox_spatial_lens --keepdb -v 2
