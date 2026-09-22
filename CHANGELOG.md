@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 (2026-09-22)
 
 - **CI:** GitHub Actions run ruff and the test suite on NetBox 4.7 with Python 3.12 to 3.14, with and without netbox-branching, and publish a GitHub release to PyPI with trusted publishing. The PyPI page gets the README with its captures and links pointed at the release tag.
 - **Floor Devices view:** moves more smoothly in a large room: about a quarter of the draw calls per frame on a hall of 80 racks (21,700 before with 1,500 devices, 5,700 after with 1,750). Each device is three draw groups instead of six and shares its box with devices of the same size, the devices of a rack share one chassis material and leave the shadow to the cabinet, each cabinet frame is three merged meshes, and a device's name is painted on a canvas only for a face that has no image.

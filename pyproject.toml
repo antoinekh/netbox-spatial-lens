@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "netbox-spatial-lens"
-version = "0.3.0"
+version = "0.4.0"
 description = "World map, floor plans and rack elevations for NetBox, recoloured by power, cooling and space"
 readme = "README.md"
 requires-python = ">=3.12"
