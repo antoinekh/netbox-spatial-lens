@@ -22,9 +22,6 @@ A lens does two things to what you point it at: it brings one place into focus, 
 
 A NetBox plugin. NetBox knows a rack's height, footprint, power feeds and cooling capability. It does not know where the rack stands in the room, and it will not colour a room by any of those values. This draws the room and colours it.
 
-> [!NOTE]
-> **Cowritten with AI.** The code, tests and documents were written with Claude, under a human's direction and review.
-
 > [!WARNING]
 > **Not stable yet.** The version is below 1.0. Models, settings and APIs can still change between releases. Read the [changelog](CHANGELOG.md) before you upgrade.
 
@@ -55,15 +52,17 @@ Every room in the site as a small plan with its own figures, on a tab of NetBox'
 
 The room in 3D, every rack a cabinet at its real position, rotation and height, coloured by **power**, **cooling**, **space** or **role**, with the reading rising up its doors and the cable runs arcing over the tops. Look from the top, at three quarters or from the side, and switch from **Cabinets** to **Devices** to see every rack open with its real devices and their front and rear images. Switch to **2D** for the plan over a scanned drawing, with zoom. Both views share a sortable rack table. Find racks by name or asset tag, narrow them by tag or custom field, and place them in the layout editor.
 
-![A row of eight cabinets standing on a metre grid, their roofs and doors coloured by how full they are, the cables leaving the row running from their tops to the walls, and the hover card of one rack](docs/images/floor-3d.png)
+![A 20.7 by 13.2 metre data hall of 80 cabinets in eight rows of ten, two blocks of four rows either side of a central aisle, their roofs and doors coloured by how full they are, the leaf to spine uplinks arcing from every rack to the two spines in row A, and the hover card of rack G04](docs/images/floor-3d.png)
 
-![Row 3 in the Devices view: eight open cabinets on the metre grid, each with its real devices and their rear panels, roofs coloured by rack role, and the hover card of one server naming its rack, type and unit](docs/images/floor-devices.png)
+![The same hall of 80 racks in the Devices view: every cabinet open with its real devices, roofs coloured by rack role, and the hover card of one switch naming its rack, type and unit](docs/images/floor-devices.png)
+
+![The hall in the Devices view with "c" in the find box: the ten racks of row C stand out with their devices and every other rack fades, and the hover card of one router in C08](docs/images/floor-devices-find.png)
 
 ### The rack
 
 The cabinet in 3D, with the real front and rear images of each device type, every cable run through the cable managers, and reserved and free units. Turn it, move it and zoom, or jump to the front, the rear or the side. Devices are coloured by **role**, **status**, **tenant**, **cabling** or **power**. Find devices by name or asset tag, and narrow them by tag or custom field. It needs WebGL and Three.js, which loads from a CDN by default or from your own copy.
 
-![A 48U cabinet seen from behind and to the side, the switch at the top and the servers below it wearing their real rear panels, the data cables dressed up one cable manager and the power leads up the other, beside the port allocation and cabling panels](docs/images/rack.png)
+![Rack C04, a 48U cabinet of 49 devices seen from behind and to the side, the switches wearing their real rear panels, the data cables dressed up one cable manager and the power leads up the other, and the two uplinks leaving through the roof, beside the port allocation and cabling panels](docs/images/rack.png)
 
 ### On every level
 

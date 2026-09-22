@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Floor Devices view:** moves more smoothly in a large room: about a quarter of the draw calls per frame on a hall of 80 racks (21,700 before with 1,500 devices, 5,700 after with 1,750). Each device is three draw groups instead of six and shares its box with devices of the same size, the devices of a rack share one chassis material and leave the shadow to the cabinet, each cabinet frame is three merged meshes, and a device's name is painted on a canvas only for a face that has no image.
+- **Docs:** retook every 3D capture on a hall of 80 racks in eight rows of ten, to show the plugin at data centre scale, and added a capture of the Devices view narrowed to one row by the find box.
 - **Docs:** `extending.md` covers colourings and custom field filters together, with a tested example and a capture for each level.
 
 ## v0.3.0 (2026-09-15)

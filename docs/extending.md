@@ -78,7 +78,7 @@ def heat_overlay(racks):
 
 The result: a **Heat** button beside the built-in colourings, each rack gauged against its own cooling capacity, and the plugin's four bands in the legend.
 
-![Row 1 floor coloured by the Heat example: racks R101 to R108 gauged from 21% to 94% of their cooling capacity, with the four utilisation bands in the legend](images/extending-heat.png)
+![A hall of 80 racks coloured by the Heat example: each rack gauged against its own cooling capacity, the legend counting 23 under 50%, 33 from 50 to 74%, 17 from 75 to 89% and 7 at 90% and over, and the hover card of H05 reading 14.1 of 16.00 kW](images/extending-heat.png)
 
 ### Example: end of support in the rack view
 
@@ -112,7 +112,7 @@ def support_overlay(mounted):
 
 The result: a **Support** button beside the built-in colourings, each device in its band, and the date in its hover card.
 
-![Rack R303 from the front coloured by the Support example: servers in red, orange and green, the legend counting 2 ended, 4 ending within a year and 7 supported, and the hover card of r303-srv08 reading "Support ends 2026-01-26"](images/extending-support.png)
+![Rack C04 from the front coloured by the Support example: devices in red, orange and green, the legend counting 12 ended, 11 ending within a year and 26 supported, and the hover card of c04-srv09 reading "Support ends 2030-09-24"](images/extending-support.png)
 
 ### Example: service tier on the world map
 
@@ -198,7 +198,7 @@ PLUGINS_CONFIG = {
 
 The world map has no custom field filters.
 
-![Row 1 floor coloured by the Heat example with the Compliancy finder open: PCI DSS ticked, SOX and ISO 27001 not, each with its choice colour and count; the three PCI DSS racks stay lit and the rack table reads 3 of 8](images/extending-filter.png)
+![The hall of 80 racks coloured by the Heat example with the Compliancy finder open: PCI DSS ticked, SOX and ISO 27001 not, each with its choice colour and count; the 27 PCI DSS racks stay lit and every other rack fades](images/extending-filter.png)
 
 - The button lists the values in use on the page, with how many racks or devices carry each, in the order of the field's choices. A field with no value in use gets no button.
 - Each value wears the colour of its choice in the choice set. A choice with no colour gets one that no other value on the page wears.
