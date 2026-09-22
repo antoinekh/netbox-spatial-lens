@@ -86,13 +86,14 @@ async function loadThree(config, noun) {
     );
   }
   try {
-    const [THREE, controls, labels, environment] = await Promise.all([
+    const [THREE, controls, labels, environment, geometryUtils] = await Promise.all([
       import('three'),
       import('three/addons/controls/OrbitControls.js'),
       import('three/addons/renderers/CSS2DRenderer.js'),
       import('three/addons/environments/RoomEnvironment.js'),
+      import('three/addons/utils/BufferGeometryUtils.js'),
     ]);
-    return { THREE, ...controls, ...labels, ...environment };
+    return { THREE, ...controls, ...labels, ...environment, mergeGeometries: geometryUtils.mergeGeometries };
   } catch (error) {
     console.warn('netbox-spatial-lens:', error);
     throw new ReaderError(
@@ -128,7 +129,7 @@ export async function openStage(element, config, noun, build) {
 }
 
 function createStage(element, lib) {
-  const { THREE, OrbitControls, CSS2DRenderer, CSS2DObject, RoomEnvironment } = lib;
+  const { THREE, OrbitControls, CSS2DRenderer, CSS2DObject, RoomEnvironment, mergeGeometries } = lib;
 
   const host = element.querySelector('[data-lens-3d-canvas]');
   const tip = element.querySelector('[data-lens-3d-tip]');
@@ -545,6 +546,7 @@ function createStage(element, lib) {
 
   return {
     THREE,
+    mergeGeometries,
     scene,
     camera,
     controls,

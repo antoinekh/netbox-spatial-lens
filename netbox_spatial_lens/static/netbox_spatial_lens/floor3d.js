@@ -15,7 +15,7 @@
  * `floor.js` owns the switch between the two views, and is told here when 3D cannot be drawn.
  */
 
-import { drawCabinet, drawDevice } from 'lens/cabinet3d';
+import { chassisMaterial, drawCabinet, drawDevice } from 'lens/cabinet3d';
 import { CABINET_FINISH, PICK_LAYER, follow, isDark, openStage } from 'lens/stage3d';
 
 const element = document.querySelector('[data-lens-3d]');
@@ -220,9 +220,12 @@ function build(stage, config) {
           data.racks.forEach(function (entry) {
             const view = byId.get(entry.id);
             if (!view) return;
-            view.detailMaterials.push(...drawCabinet(stage, view.detail, entry.cabinet).materials);
+            // One chassis for the rack's devices, faded with its cabinet, and the shadow left to
+            // the cabinet: a room of a thousand devices each casting its own is too many draws.
+            const body = chassisMaterial(stage);
+            view.detailMaterials.push(...drawCabinet(stage, view.detail, entry.cabinet).materials, body);
             entry.devices.forEach(function (device) {
-              const box = drawDevice(stage, view.detail, device);
+              const box = drawDevice(stage, view.detail, device, { body, castShadow: false });
               box.mesh.userData.device = { box, rack: view };
               view.devices.push(box);
               deviceMeshes.push(box.mesh);
@@ -361,8 +364,7 @@ function build(stage, config) {
       const opacity = kept ? 1 : FILTERED_OPACITY;
       view.materials.concat(view.detailMaterials).forEach((material) => stage.setOpacity(material, opacity));
       view.devices.forEach(function (box) {
-        [box.faces.front, box.faces.rear, box.body].forEach((material) => stage.setOpacity(material, opacity));
-        box.mesh.castShadow = kept;
+        [box.faces.front, box.faces.rear].forEach((material) => stage.setOpacity(material, opacity));
       });
       view.mesh.castShadow = kept;
       const lit = hoveredRack === view;
