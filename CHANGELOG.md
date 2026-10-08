@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Docs:** the README shows a 15 second showreel video below the introduction.
+
 ## v0.4.0 (2026-09-22)
 
 - **CI:** GitHub Actions run ruff and the test suite on NetBox 4.7 with Python 3.12 to 3.14, with and without netbox-branching, and publish a GitHub release to PyPI with trusted publishing. The PyPI page gets the README with its captures and links pointed at the release tag.

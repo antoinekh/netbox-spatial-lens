@@ -22,6 +22,8 @@ A lens does two things to what you point it at: it brings one place into focus, 
 
 A NetBox plugin. NetBox knows a rack's height, footprint, power feeds and cooling capability. It does not know where the rack stands in the room, and it will not colour a room by any of those values. This draws the room and colours it.
 
+https://github.com/user-attachments/assets/15360e00-abfa-40f1-a338-959fd32c0023
+
 > [!WARNING]
 > **Not stable yet.** The version is below 1.0. Models, settings and APIs can still change between releases. Read the [changelog](CHANGELOG.md) before you upgrade.
 
