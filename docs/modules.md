@@ -20,6 +20,7 @@ What each part of the plugin holds. The Python modules are under `netbox_spatial
 | `legend.js` | Picking bands, shared by all three levels |
 | `finder.js` | Searching and ticking a long list, shared by the map and the rack |
 | `state.js` | What a drawing is narrowed to, kept in the URL hash |
+| `export.js` | A drawing as a PNG with its title and legends, shared by the floor, the rack and the map |
 | `zoom.js` | Zooming into a floor plan and moving round it, on the floor page and in the editor |
 | `floor.js` | The floor: the 3D and 2D switch, the plan's hover card, the find box and the rack table |
 | `floor3d.js` | The floor on a 3D stage: cabinets or devices, cabling, filters and the hover card |

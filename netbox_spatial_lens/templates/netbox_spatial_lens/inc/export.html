@@ -1,0 +1,8 @@
+{% comment %}
+The button that downloads the drawing on show as a PNG. Read by export.js, which enables it once
+a drawing can be captured. Pass `name`, what the drawing is of, the `site` it is in if any, and `colouring`, what colours it.
+{% endcomment %}
+<button type="button" class="btn btn-sm btn-outline-secondary" data-lens-export disabled
+        data-lens-title="{% if site %}{{ site.name }} / {% endif %}{{ name }}" data-lens-colouring="{{ colouring|default:'' }}" title="Download as an image">
+  <i class="mdi mdi-download" aria-hidden="true"></i><span class="visually-hidden">Download as an image</span>
+</button>

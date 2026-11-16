@@ -47,6 +47,7 @@
           {% else %}
             <span class="lens-toolbar__spacer"></span>
           {% endif %}
+          {% include 'netbox_spatial_lens/inc/export.html' with site=object.site name=object.name colouring=device_overlay.label %}
           {% include 'netbox_spatial_lens/inc/help.html' with text='Drag to turn the rack, right-drag to move it, scroll to zoom. Click a device to show what it is cabled to. Double-click a device to open it. Click a cable to trace it. The find box matches a name or an asset tag; Tags narrows to the devices with any tag you tick. Click legend bands to filter; you can pick several. Escape clears.' %}
         </div>
 
@@ -283,6 +284,7 @@
 <script src="{% lens_static 'netbox_spatial_lens/state.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/legend.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/finder.js' %}" defer></script>
+<script src="{% lens_static 'netbox_spatial_lens/export.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/rack_panel.js' %}" defer></script>
 <script type="module" src="{% lens_static 'netbox_spatial_lens/rack3d.js' %}"></script>
 {% endblock %}

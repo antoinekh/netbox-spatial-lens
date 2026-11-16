@@ -59,6 +59,7 @@
           strip and on the two buttons, and a third copy of them here said nothing new.
           {% endcomment %}
           <span class="text-muted lens-scale" data-lens-world-status></span>
+          {% include 'netbox_spatial_lens/inc/export.html' with name='World map' colouring=overlay.label %}
           {% include 'netbox_spatial_lens/inc/help.html' with text='Click a site to open it. Click a circuit to highlight it and its two ends. Sites and Circuits find by name and narrow the map to what you tick; tick one to trace it. Click legend bands to filter; you can pick several. Marker size is the rack count. Escape clears.' %}
         </div>
 
@@ -139,5 +140,6 @@
 <script src="{% lens_static 'netbox_spatial_lens/state.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/legend.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/finder.js' %}" defer></script>
+<script src="{% lens_static 'netbox_spatial_lens/export.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/world.js' %}" defer></script>
 {% endblock %}

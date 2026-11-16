@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Image export:** a button on the floor, the rack and the world map downloads the drawing as a PNG, with a title, the date and the legends. The image shows what is on screen: the camera, the zoom, the filters and the picked bands. A background layer that the browser cannot read is left out, and the image says so.
+
 ## v0.5.0 (2026-11-16)
 
 ### Upgrade notes

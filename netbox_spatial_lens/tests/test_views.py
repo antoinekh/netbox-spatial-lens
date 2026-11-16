@@ -68,6 +68,11 @@ class FloorViewTest(ViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'lens-floor')
 
+    def test_the_exported_image_is_named_after_the_site_the_floor_and_the_colouring(self):
+        response = self.client.get(self.floor.get_absolute_url(), {'overlay': 'space'})
+        self.assertContains(response, f'data-lens-title="{self.site.name} / {self.floor.name}"')
+        self.assertContains(response, 'data-lens-colouring="Space"')
+
     def test_a_floor_in_a_location_still_names_its_site(self):
         # A floor binds to a site or to a location, never both, so a room in a location had a
         # dash where its site should be. The site is not in doubt; only how the floor reached
@@ -177,6 +182,7 @@ class RackViewTest(ViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-lens-view="front"')
         self.assertContains(response, 'data-lens-view="rear"')
+        self.assertContains(response, f'data-lens-title="{self.site.name} / {rack.name}"')
 
     def test_an_empty_rack_does_not_break(self):
         rack = make_rack(self.site, u_height=10)
@@ -399,6 +405,7 @@ class WorldViewTest(ViewTestCase):
         self.site.save()
         response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
         self.assertContains(response, self.site.name)
+        self.assertContains(response, 'data-lens-title="World map"')
 
     def test_the_map_offers_every_colouring(self):
         self.site.latitude, self.site.longitude = 51.5, -0.12

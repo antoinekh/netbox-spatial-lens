@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/15360e00-abfa-40f1-a338-959fd32c0023
 
 ## What it does
 
-**World → site → floor → rack**, one click each way. Every drawing has a stat strip above it and a legend that filters it.
+**World → site → floor → rack**, one click each way. Every drawing has a stat strip above it and a legend that filters it, and downloads as an image with its legend.
 
 ### The world map
 

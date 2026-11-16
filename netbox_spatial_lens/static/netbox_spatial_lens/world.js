@@ -658,9 +658,30 @@
     });
 
     mapReady = true;
+    if (window.lensExport) window.lensExport.register(mapEl, captureMap);
     fitToBands({ animate: false });
     message.hidden = true;
     apply();
+  }
+
+  /* The map as a canvas. Read inside the frame that draws it: the map keeps no copy of a frame
+     once the browser has shown it. */
+  function captureMap() {
+    return new Promise(function (resolve) {
+      map.once('render', function () {
+        const width = mapEl.clientWidth;
+        const height = mapEl.clientHeight;
+        const scale = window.lensExport.SCALE;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        canvas.getContext('2d').drawImage(map.getCanvas(), 0, 0, canvas.width, canvas.height);
+        const credit = document.createElement('span');
+        credit.innerHTML = config.tileUrl ? config.attribution || '' : '';
+        resolve({ canvas, width, height, credit: credit.textContent.trim() });
+      });
+      map.triggerRepaint();
+    });
   }
 
   if (!config.nodes.length) return;

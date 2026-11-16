@@ -605,6 +605,22 @@ function createStage(element, lib) {
     requestRender();
   }
 
+  /* The stage as a canvas, names included. Read in the task that draws the frame: the renderer
+     keeps no copy of a frame once the browser has shown it. */
+  function capture() {
+    const width = host.clientWidth;
+    const height = host.clientHeight;
+    const scale = window.lensExport.SCALE;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width * scale);
+    canvas.height = Math.round(height * scale);
+    const context = canvas.getContext('2d');
+    renderer.render(scene, camera);
+    context.drawImage(renderer.domElement, 0, 0, canvas.width, canvas.height);
+    window.lensExport.drawLabels(context, labelRenderer.domElement, scale);
+    return Promise.resolve({ canvas, width, height });
+  }
+
   return {
     THREE,
     mergeGeometries,
@@ -648,6 +664,7 @@ function createStage(element, lib) {
       controlsBar.hidden = false;
       new ResizeObserver(resize).observe(host);
       resize();
+      if (window.lensExport) window.lensExport.register(element, capture);
     },
   };
 }

@@ -74,6 +74,7 @@ page's title, so it is not said again here.
               <input type="search" data-lens-find placeholder="Name or asset tag" aria-label="Find a rack or asset tag"
                      autocomplete="off" spellcheck="false">
             </label>
+            {% include 'netbox_spatial_lens/inc/export.html' with site=object.effective_site name=object.name colouring=overlay.label %}
             {% include 'netbox_spatial_lens/inc/help.html' with text='Click a rack to go inside it. Hover a rack to see its detail. In 3D, drag to turn the room, right-drag to move it, scroll to zoom. In 2D, Ctrl + wheel zooms and dragging moves the plan when zoomed. The find box matches a name or an asset tag; Tags narrows to the racks with any tag you tick. Click legend bands to filter; you can pick several. Escape clears.' %}
           {% endif %}
         </div>
@@ -291,6 +292,7 @@ page's title, so it is not said again here.
 <script src="{% lens_static 'netbox_spatial_lens/legend.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/finder.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/zoom.js' %}" defer></script>
+<script src="{% lens_static 'netbox_spatial_lens/export.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/floor.js' %}" defer></script>
 {% if placed_racks %}
   {{ floor3d_config|json_script:"lens-floor3d-config" }}
