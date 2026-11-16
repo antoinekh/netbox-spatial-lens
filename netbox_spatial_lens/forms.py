@@ -1,8 +1,19 @@
 from dcim.models import Location, Rack, Site
 from django import forms
-from netbox.forms import NetBoxModelBulkEditForm, NetBoxModelFilterSetForm, NetBoxModelForm
+from netbox.forms import (
+    NetBoxModelBulkEditForm,
+    NetBoxModelFilterSetForm,
+    NetBoxModelForm,
+    NetBoxModelImportForm,
+)
 from utilities.forms import BOOLEAN_WITH_BLANK_CHOICES
-from utilities.forms.fields import CommentField, DynamicModelChoiceField, TagFilterField
+from utilities.forms.fields import (
+    CommentField,
+    CSVChoiceField,
+    CSVModelChoiceField,
+    DynamicModelChoiceField,
+    TagFilterField,
+)
 from utilities.forms.rendering import FieldSet
 from utilities.forms.widgets import BulkEditNullBooleanSelect
 
@@ -13,15 +24,38 @@ __all__ = (
     'FloorBulkEditForm',
     'FloorFilterForm',
     'FloorForm',
+    'FloorImportForm',
     'FloorLayerFilterForm',
     'FloorLayerForm',
+    'FloorLayerImportForm',
     'RackPlacementBulkEditForm',
     'RackPlacementFilterForm',
     'RackPlacementForm',
+    'RackPlacementImportForm',
 )
 
 
-class FloorForm(NetBoxModelForm):
+class FloorBindingMixin:
+    """
+    Keeps the location when a floor names both a site and one of its locations.
+
+    The site narrows the location list, so choosing a site and then one of its locations is the
+    ordinary way to bind a floor to a location. The model takes one or the other, so the site is
+    dropped here rather than the form being refused for being filled in as asked.
+    """
+
+    def clean(self):
+        # NetBoxModelForm.clean() returns nothing, so the data is read off the form.
+        super().clean()
+        site, location = self.cleaned_data.get('site'), self.cleaned_data.get('location')
+        if site and location:
+            if location.site_id != site.pk:
+                raise forms.ValidationError({'location': f'{location} is not in {site}.'})
+            self.cleaned_data['site'] = None
+        return self.cleaned_data
+
+
+class FloorForm(FloorBindingMixin, NetBoxModelForm):
     site = DynamicModelChoiceField(queryset=Site.objects.all(), required=False)
     location = DynamicModelChoiceField(
         queryset=Location.objects.all(),
@@ -47,22 +81,76 @@ class FloorForm(NetBoxModelForm):
         if self.instance.location_id and not self.instance.site_id:
             self.initial['site'] = self.instance.location.site_id
 
-    def clean(self):
-        """
-        Keep the location when both are given.
 
-        The site narrows the location list, so choosing a site and then one of its locations is
-        the ordinary way to bind a floor to a location. The model takes one or the other, so the
-        site is dropped here rather than the form being refused for being filled in as asked.
-        """
-        # NetBoxModelForm.clean() returns nothing, so the data is read off the form.
-        super().clean()
-        site, location = self.cleaned_data.get('site'), self.cleaned_data.get('location')
-        if site and location:
-            if location.site_id != site.pk:
-                raise forms.ValidationError({'location': f'{location} is not in {site}.'})
-            self.cleaned_data['site'] = None
-        return self.cleaned_data
+class SiteScopedImportForm(NetBoxModelImportForm):
+    """
+    An import whose rows name a site, and then things in that site by their name alone.
+
+    A floor, a location and a rack are each unique by name within a site only, so the site
+    column is what makes "Hall 1" or "R101" mean one object.
+    """
+
+    site = CSVModelChoiceField(queryset=Site.objects.all(), to_field_name='name', help_text='Name of the site')
+
+    def __init__(self, data=None, *args, **kwargs) -> None:
+        super().__init__(data, *args, **kwargs)
+        if not data:
+            return
+        site = Site.objects.filter(name=data.get('site')).first()
+        for name, field in self.fields.items():
+            if name == 'floor':
+                field.queryset = Floor.in_site(site) if site else Floor.objects.none()
+            elif name in ('location', 'rack'):
+                field.queryset = field.queryset.filter(site=site)
+
+
+class FloorImportForm(FloorBindingMixin, SiteScopedImportForm):
+    location = CSVModelChoiceField(
+        queryset=Location.objects.all(),
+        required=False,
+        to_field_name='name',
+        help_text='Name of a location in the site, to bind the floor to it instead of to the site',
+    )
+    unit = CSVChoiceField(choices=MeasurementUnitChoices, required=False, help_text='Unit of the width and the depth')
+
+    class Meta:
+        model = Floor
+        fields = ('site', 'location', 'name', 'width', 'depth', 'unit', 'description', 'comments', 'tags')
+
+    def clean_unit(self) -> str:
+        return self.cleaned_data['unit'] or MeasurementUnitChoices.METRES
+
+
+class RackPlacementImportForm(SiteScopedImportForm):
+    floor = CSVModelChoiceField(queryset=Floor.objects.all(), to_field_name='name', help_text='Name of the floor')
+    rack = CSVModelChoiceField(queryset=Rack.objects.all(), to_field_name='name', help_text='Name of the rack')
+
+    class Meta:
+        model = RackPlacement
+        fields = ('site', 'floor', 'rack', 'x', 'y', 'rotation', 'tags')
+
+
+class FloorLayerImportForm(SiteScopedImportForm):
+    floor = CSVModelChoiceField(queryset=Floor.objects.all(), to_field_name='name', help_text='Name of the floor')
+
+    class Meta:
+        model = FloorLayer
+        # No `file`: a CSV row cannot carry an upload, so an imported layer links its image.
+        fields = (
+            'site',
+            'floor',
+            'name',
+            'external_url',
+            'x',
+            'y',
+            'width',
+            'height',
+            'rotation',
+            'opacity',
+            'weight',
+            'enabled',
+            'tags',
+        )
 
 
 class FloorFilterForm(NetBoxModelFilterSetForm):

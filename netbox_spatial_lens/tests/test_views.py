@@ -483,6 +483,51 @@ class BulkActionTest(ViewTestCase):
             with self.subTest(url=url):
                 self.assertNotContains(self.client.get(url), 'formaction="None"')
 
+    def test_no_list_offers_an_unrouted_button(self):
+        for name in ('floor_list', 'rackplacement_list', 'floorlayer_list'):
+            with self.subTest(name=name):
+                self.assertNotContains(self.client.get(reverse(f'plugins:netbox_spatial_lens:{name}')), 'href="None"')
+
+    def _import(self, name: str, csv: str):
+        return self.client.post(
+            reverse(f'plugins:netbox_spatial_lens:{name}_bulk_import'),
+            {'data': csv, 'format': 'csv', 'csv_delimiter': 'auto'},
+        )
+
+    def test_floors_are_imported_bound_to_a_site_or_to_one_of_its_locations(self):
+        from dcim.models import Location
+
+        location = Location.objects.create(site=self.site, name='Row 9', slug='row-9')
+        response = self._import(
+            'floor',
+            f'site,location,name,width,depth\n{self.site.name},,Hall A,12.5,8\n{self.site.name},Row 9,Hall B,6,4\n',
+        )
+        self.assertEqual(response.status_code, 302, response.content[:3000])
+        hall_a, hall_b = Floor.objects.get(name='Hall A'), Floor.objects.get(name='Hall B')
+        self.assertEqual((hall_a.site, hall_a.location, hall_a.unit), (self.site, None, 'm'))
+        self.assertEqual((hall_b.site, hall_b.location), (None, location))
+
+    def test_placements_are_imported_by_the_names_of_the_site_the_floor_and_the_rack(self):
+        from netbox_spatial_lens.models import RackPlacement
+
+        other = Site.objects.create(name='Elsewhere', slug='elsewhere')
+        make_rack(other, name='R7')
+        rack = make_rack(self.site, name='R7')
+        response = self._import(
+            'rackplacement', f'site,floor,rack,x,y,rotation\n{self.site.name},{self.floor.name},R7,250,300,180\n'
+        )
+        self.assertEqual(response.status_code, 302, response.content[:3000])
+        placement = RackPlacement.objects.get(rack=rack)
+        self.assertEqual((placement.floor, float(placement.x), float(placement.rotation)), (self.floor, 250, 180))
+
+    def test_a_placement_outside_the_room_is_refused_on_import(self):
+        make_rack(self.site, name='R8')
+        response = self._import(
+            'rackplacement', f'site,floor,rack,x,y\n{self.site.name},{self.floor.name},R8,99999,300\n'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Must be between 0 and')
+
     def test_the_bulk_routes_resolve(self):
         for name in (
             'floor_bulk_edit',

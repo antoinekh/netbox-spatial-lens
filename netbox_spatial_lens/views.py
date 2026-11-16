@@ -58,10 +58,12 @@ from netbox_spatial_lens.world import build_world
 __all__ = (
     'FloorBulkDeleteView',
     'FloorBulkEditView',
+    'FloorBulkImportView',
     'FloorDeleteView',
     'FloorEditView',
     'FloorLayerBulkDeleteView',
     'FloorLayerBulkEditView',
+    'FloorLayerBulkImportView',
     'FloorLayerEditView',
     'FloorLayerListView',
     'FloorLayoutView',
@@ -70,6 +72,7 @@ __all__ = (
     'RackLensView',
     'RackPlacementBulkDeleteView',
     'RackPlacementBulkEditView',
+    'RackPlacementBulkImportView',
     'RackPlacementDeleteView',
     'RackPlacementEditView',
     'RackPlacementListView',
@@ -222,6 +225,11 @@ class FloorEditView(generic.ObjectEditView):
 @register_model_view(Floor, 'delete')
 class FloorDeleteView(generic.ObjectDeleteView):
     queryset = Floor.objects.all()
+
+
+class FloorBulkImportView(generic.BulkImportView):
+    queryset = Floor.objects.all()
+    model_form = forms.FloorImportForm
 
 
 class FloorBulkEditView(generic.BulkEditView):
@@ -556,6 +564,11 @@ class TraceView(LoginRequiredMixin, View):
         )
 
 
+class RackPlacementBulkImportView(generic.BulkImportView):
+    queryset = RackPlacement.objects.all()
+    model_form = forms.RackPlacementImportForm
+
+
 class RackPlacementBulkEditView(generic.BulkEditView):
     queryset = RackPlacement.objects.select_related('floor', 'rack')
     filterset = filtersets.RackPlacementFilterSet
@@ -585,6 +598,11 @@ class FloorLayerEditView(generic.ObjectEditView):
 @register_model_view(FloorLayer, 'delete')
 class FloorLayerDeleteView(generic.ObjectDeleteView):
     queryset = FloorLayer.objects.all()
+
+
+class FloorLayerBulkImportView(generic.BulkImportView):
+    queryset = FloorLayer.objects.all()
+    model_form = forms.FloorLayerImportForm
 
 
 class FloorLayerBulkEditView(generic.BulkEditView):

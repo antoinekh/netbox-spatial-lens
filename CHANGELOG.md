@@ -16,6 +16,7 @@
 - **Fixed:** a floor needs a width and a depth above zero, and a background layer a width and a height above zero. A zero or negative size was accepted and gave a plan that could not be drawn. Run `manage.py migrate` after the upgrade.
 - **Fixed:** in the rack view, a cable between two ports of one device is listed once under that device, not twice.
 - **Fixed:** on the 2D plan and in the layout editor, the name of a rack turned to face down the plan is upright. It was drawn upside down.
+- **Import:** floors, rack placements and background layers can be imported from CSV, YAML or JSON with the Import button of each list. A row names its site, then the floor and the rack by name. The button was shown before, with no page behind it.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)
