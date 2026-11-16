@@ -8,7 +8,7 @@ so there is one way to write a placement and one set of permissions guarding it.
 
 from dataclasses import dataclass
 
-from circuits.models import Circuit
+from circuits.models import Circuit, ProviderNetwork
 from dcim.models import Device, Rack, Site
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
@@ -419,6 +419,7 @@ class WorldView(generic.ObjectListView):
             circuits=Circuit.objects.restrict(request.user, 'view'),
             racks=Rack.objects.restrict(request.user, 'view'),
             devices=Device.objects.restrict(request.user, 'view'),
+            provider_networks=ProviderNetwork.objects.restrict(request.user, 'view'),
         )
 
         # Where a site marker takes you: its one room where it has one, the site's rooms where

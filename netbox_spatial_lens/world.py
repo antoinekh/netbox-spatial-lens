@@ -105,7 +105,9 @@ class WorldMap:
         return [n for n in self.nodes if n.kind == 'site']
 
 
-def build_world(sites_queryset=None, overlay=None, circuits=None, racks=None, devices=None) -> WorldMap:
+def build_world(
+    sites_queryset=None, overlay=None, circuits=None, racks=None, devices=None, provider_networks=None
+) -> WorldMap:
     """
     Every geocoded site, and the circuits joining them.
 
@@ -124,6 +126,8 @@ def build_world(sites_queryset=None, overlay=None, circuits=None, racks=None, de
     `circuits` is restricted the same way, and for the same reason: a user allowed to see the
     sites but not the circuits between them should not be handed every CID, provider and commit
     rate in the estate because the lines happen to be drawn on a map they may open.
+    `provider_networks` likewise: a circuit to a network the reader may not view is not drawn,
+    because its far end is a point the map would have to name.
 
     `racks` and `devices` are restricted too, for the counts: a site's marker is sized by its
     racks, and a count that includes cabinets the reader may not open says something the site's
@@ -182,7 +186,7 @@ def build_world(sites_queryset=None, overlay=None, circuits=None, racks=None, de
             facts=_site_facts(site, racks, device_counts.get(site.pk, 0), overlay, values.get(site.pk)),
         )
 
-    links = _build_links(nodes, circuits)
+    links = _build_links(nodes, circuits, provider_networks)
     for link in links:
         link.a.link_count += 1
         link.z.link_count += 1
@@ -380,7 +384,7 @@ def _endpoint_key(termination) -> tuple[str | None, str | None, str | None]:
     return None, None, None
 
 
-def _build_links(nodes: dict, circuits=None) -> list[WorldLink]:
+def _build_links(nodes: dict, circuits=None, provider_networks=None) -> list[WorldLink]:
     """
     Circuits with both ends resolvable, drawn between their endpoints.
 
@@ -399,6 +403,13 @@ def _build_links(nodes: dict, circuits=None) -> list[WorldLink]:
         )
     )
 
+    # The keys of the provider networks the reader may view, or None when nothing restricts them.
+    visible_networks = (
+        None
+        if provider_networks is None
+        else {f'provider:{pk}' for pk in provider_networks.values_list('pk', flat=True)}
+    )
+
     pending, provider_members, provider_labels = [], {}, {}
     for circuit in circuits:
         terminations = list(circuit.terminations.all())
@@ -408,6 +419,10 @@ def _build_links(nodes: dict, circuits=None) -> list[WorldLink]:
         a_key, a_label, a_kind = _endpoint_key(terminations[0])
         z_key, z_label, z_kind = _endpoint_key(terminations[1])
         if not a_key or not z_key or a_key == z_key:
+            continue
+        if visible_networks is not None and any(
+            kind == 'provider' and key not in visible_networks for key, kind in ((a_key, a_kind), (z_key, z_kind))
+        ):
             continue
         pending.append((circuit, a_key, z_key))
 

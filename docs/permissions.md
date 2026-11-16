@@ -27,7 +27,7 @@ None of these are the plugin's own objects, and every one of them is read throug
 
 | Page | Reads | Restricted on |
 |---|---|---|
-| World map | Sites, circuits, floors, the rack and device counts of each site | `dcim.site`, `circuits.circuit`, `netbox_spatial_lens.floor`, `dcim.rack`, `dcim.device` |
+| World map | Sites, circuits, provider networks, floors, the rack and device counts of each site | `dcim.site`, `circuits.circuit`, `circuits.providernetwork`, `netbox_spatial_lens.floor`, `dcim.rack`, `dcim.device` |
 | Site | Floors, rack placements, racks | `netbox_spatial_lens.floor`, `dcim.rack` |
 | Floor, in 3D and in 2D | Rack placements, racks, the device count on each rack | `netbox_spatial_lens.rackplacement`, `dcim.rack`, `dcim.device` |
 | Floor, cable runs | What a cable leaving the room reaches | `circuits.circuit`, `dcim.rack`, `dcim.site` |

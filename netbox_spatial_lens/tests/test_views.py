@@ -702,6 +702,20 @@ class WorldCircuitTest(LensTestCase):
         self.assertEqual(build_world(circuits=none).links, [])
         self.assertEqual(build_world(circuits=none).providers, [])
 
+    def test_a_provider_network_the_reader_may_not_see_is_not_on_the_map(self):
+        from circuits.models import CircuitTermination, ProviderNetwork
+
+        circuit = self.circuit('CID-1', 'Level 3')
+        network = ProviderNetwork.objects.create(name='MPLS cloud', provider=circuit.provider)
+        z_end = CircuitTermination.objects.get(circuit=circuit, term_side='Z')
+        z_end.termination = network
+        z_end.save()
+        self.assertEqual([n.label for n in build_world().nodes if n.kind == 'provider'], ['MPLS cloud'])
+
+        world = build_world(provider_networks=ProviderNetwork.objects.none())
+        self.assertEqual([n for n in world.nodes if n.kind == 'provider'], [])
+        self.assertEqual(world.links, [])
+
     def test_an_estate_with_no_circuits_has_no_provider_legend(self):
         self.assertEqual(build_world().providers, [])
 

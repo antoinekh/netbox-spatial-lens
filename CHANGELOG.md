@@ -12,6 +12,7 @@
 - **Fixed:** the rack view draws a cable between a mounted device and a device of the same rack that has no U position. The cable was dropped when its A end was on the device with no position.
 - **Fixed:** the power figure of a rack on the floor agrees with NetBox in three more cases: a PDU inlet that declares its own draw, a PDU fed by another PDU, and a PDU with a second inlet that no feed of the rack supplies. The floor and the rack view now use the same calculation.
 - **Fixed:** with Cable runs on, a cable to something of the same site that stands in no rack (a power feed, a wall-mounted device) is drawn as "Off the plan". It was drawn and counted as "To another site", under the name of its own site.
+- **Fixed:** the world map does not draw a provider network the reader may not view, nor the circuits that end on it.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)
