@@ -27,7 +27,7 @@ None of these are the plugin's own objects, and every one of them is read throug
 
 | Page | Reads | Restricted on |
 |---|---|---|
-| World map | Sites, circuits, floors | `dcim.site`, `circuits.circuit`, `netbox_spatial_lens.floor` |
+| World map | Sites, circuits, floors, the rack and device counts of each site | `dcim.site`, `circuits.circuit`, `netbox_spatial_lens.floor`, `dcim.rack`, `dcim.device` |
 | Site | Floors, rack placements, racks | `netbox_spatial_lens.floor`, `dcim.rack` |
 | Floor, in 3D and in 2D | Rack placements, racks, the device count on each rack | `netbox_spatial_lens.rackplacement`, `dcim.rack`, `dcim.device` |
 | Floor, cable runs | What a cable leaving the room reaches | `circuits.circuit`, `dcim.rack`, `dcim.site` |
@@ -46,10 +46,8 @@ Where a drawing reaches past what the reader may see, it says so without naming 
 
 **It does not hide that something is there.** A rack you may not see is absent from the plan, so the room is drawn with a gap in it and the tally beside it counts what you can see. The plugin will not invent a placeholder for an object it may not name, and it will not pretend the room is smaller than it is.
 
-**Aggregate counts on the world map are per site, not per permission.** The rack and device figures under a site marker come from a count over that site, so they include objects the reader may not open individually. If that matters to you, constrain `dcim.site` rather than `dcim.rack`: a reader who may not see the site does not see the marker at all.
-
 **A floor is not a permission boundary of its own.** It binds to a site or a location, and it inherits nothing from them. Someone with `view` on every floor sees every room, whatever the racks in them turn out to be. Constrain `netbox_spatial_lens.floor` if the rooms themselves are sensitive.
 
 ## Checking it
 
-The behaviour is covered by tests rather than by this document. `netbox_spatial_lens/tests/test_views.py` holds a `PermissionTest` that grants a user `view` on one rack of two and asserts the other is neither drawn nor counted, and `TraceViewTest` asserts a user who may not read cables is refused a trace. `netbox_spatial_lens/tests/test_visibility.py` covers the rest: a trace from a port the reader may not see, a hop onto a device they may not see, a far end in the rack's cabling, and the API layout. The 3D drawings are covered too: `test_scene.py` asserts a hidden device is not in the rack's scene and a hidden far end is not named, and `test_floor_scene.py` asserts a hidden rack is not in the room and a hidden device is not in the Devices view or its API.
+The behaviour is covered by tests rather than by this document. `netbox_spatial_lens/tests/test_views.py` holds a `PermissionTest` that grants a user `view` on one rack of two and asserts the other is neither drawn nor counted, on the floor and on the world map, and `TraceViewTest` asserts a user who may not read cables is refused a trace. `netbox_spatial_lens/tests/test_visibility.py` covers the rest: a trace from a port the reader may not see, a hop onto a device they may not see, a far end in the rack's cabling, and the API layout. The 3D drawings are covered too: `test_scene.py` asserts a hidden device is not in the rack's scene and a hidden far end is not named, and `test_floor_scene.py` asserts a hidden rack is not in the room and a hidden device is not in the Devices view or its API.
