@@ -4,6 +4,7 @@ Overlays, their legends, and the rule that no data is never good news.
 
 import copy
 
+from dcim.models import PowerPort
 from django.conf import settings
 from django.test import override_settings
 
@@ -264,6 +265,7 @@ class PowerOverlayTest(LensTestCase):
             outlets=2,
         )
         server = make_device(self.site, rack, 'srv', self.role, self.manufacturer, position=2, power_ports=1)
+        pdu.powerports.update(allocated_draw=None, maximum_draw=None)
         cable(pdu.powerports.first(), feed)
         cable(server.powerports.first(), pdu.poweroutlets.first())
 
@@ -288,8 +290,58 @@ class PowerOverlayTest(LensTestCase):
             outlets=2,
         )
         server = make_device(self.site, rack, 'srv2', self.role, self.manufacturer, position=2, power_ports=1)
+        pdu.powerports.update(allocated_draw=None, maximum_draw=None)
         cable(pdu.powerports.first(), feed)
         cable(server.powerports.first(), pdu.poweroutlets.first())
 
         allocated, capacity = floor_power_utilisation([rack])[rack.pk]
+        self.assertAlmostEqual(allocated / capacity * 100, rack.get_power_utilization(), places=1)
+
+    def _fed_pdu(self, rack, name='pdu3', outlets=1):
+        pdu = make_device(
+            self.site, rack, name, self.switch_role, self.manufacturer, position=1, power_ports=1, outlets=outlets
+        )
+        cable(pdu.powerports.first(), power_feed(rack, name=f'{name}-feed'))
+        return pdu
+
+    def test_a_draw_declared_on_the_pdu_inlet_is_kept_rather_than_summed(self):
+        rack = make_rack(self.site, u_height=10)
+        pdu = self._fed_pdu(rack)
+        pdu.powerports.update(allocated_draw=500)
+        server = make_device(self.site, rack, 'srv3', self.role, self.manufacturer, position=2, power_ports=1)
+        cable(server.powerports.first(), pdu.poweroutlets.first())
+
+        allocated, capacity = floor_power_utilisation([rack])[rack.pk]
+        self.assertEqual(allocated, 500)
+        self.assertAlmostEqual(allocated / capacity * 100, rack.get_power_utilization(), places=1)
+
+    def test_draw_carries_up_a_chain_of_pdus(self):
+        rack = make_rack(self.site, u_height=10)
+        upstream = self._fed_pdu(rack)
+        upstream.powerports.update(allocated_draw=None, maximum_draw=None)
+        downstream = make_device(
+            self.site, rack, 'pdu4', self.switch_role, self.manufacturer, position=2, power_ports=1, outlets=1
+        )
+        downstream.powerports.update(allocated_draw=None, maximum_draw=None)
+        server = make_device(self.site, rack, 'srv4', self.role, self.manufacturer, position=3, power_ports=1)
+        cable(downstream.powerports.first(), upstream.poweroutlets.first())
+        cable(server.powerports.first(), downstream.poweroutlets.first())
+
+        allocated, capacity = floor_power_utilisation([rack])[rack.pk]
+        self.assertEqual(allocated, 100)
+        self.assertAlmostEqual(allocated / capacity * 100, rack.get_power_utilization(), places=1)
+
+    def test_an_outlet_of_an_inlet_no_feed_supplies_is_not_this_racks_load(self):
+        rack = make_rack(self.site, u_height=10)
+        pdu = self._fed_pdu(rack, outlets=2)
+        pdu.powerports.update(allocated_draw=None, maximum_draw=None)
+        unfed = PowerPort.objects.create(device=pdu, name='inlet-b')
+        on_unfed = pdu.poweroutlets.last()
+        on_unfed.power_port = unfed
+        on_unfed.save()
+        server = make_device(self.site, rack, 'srv5', self.role, self.manufacturer, position=2, power_ports=1)
+        cable(server.powerports.first(), on_unfed)
+
+        allocated, capacity = floor_power_utilisation([rack])[rack.pk]
+        self.assertEqual(allocated, 0)
         self.assertAlmostEqual(allocated / capacity * 100, rack.get_power_utilization(), places=1)

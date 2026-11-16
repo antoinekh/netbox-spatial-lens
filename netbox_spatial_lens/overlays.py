@@ -367,7 +367,7 @@ def floor_power_utilisation(racks: Sequence) -> dict[int, tuple[float, float]]:
 
 def _floor_power_utilisation(racks: Sequence) -> dict[int, tuple[float, float]]:
     """
-    Allocated draw against feed capacity, for a whole floor, in six queries.
+    Allocated draw against feed capacity, for a whole floor, in a bounded number of queries.
 
     `Rack.get_power_utilization()` answers this for one rack in about twenty queries, so a
     floor of twenty-six cost 557 and took eight times as long as every other overlay. The
@@ -375,19 +375,20 @@ def _floor_power_utilisation(racks: Sequence) -> dict[int, tuple[float, float]]:
 
     This is the same chain NetBox walks, done in sets:
 
-        feed (capacity) -> PDU inlet -> that PDU's outlets -> the ports plugged into them
+        feed (capacity) -> the PDU inlet it supplies -> what that inlet draws
 
-    A rack's allocated draw is the sum of `allocated_draw` over the ports at the end of that
-    chain, which is what `PowerPort.get_power_draw()` returns for a PDU inlet. Restating it
-    here is a deliberate exception to leaving NetBox's arithmetic alone, and it is confined to
-    this one function so there is a single place to check it against upstream.
+    What an inlet draws is `PowerPort.get_power_draw()`, resolved for every inlet at once: the
+    draw it declares, or the sum of the ports plugged into its own outlets, through any PDU
+    chained below. The cost follows the depth of the power chain, not the number of racks.
 
     Returns rack id to (allocated watts, capacity watts). A rack with no feeds is absent, which
     is what lets the overlay tell "no supply recorded" from "supplied and idle".
     """
-    from dcim.models import PowerFeed, PowerOutlet, PowerPort
+    from dcim.models import PowerFeed, PowerPort
+    from django.contrib.contenttypes.models import ContentType
 
-    from netbox_spatial_lens.cabling import load_objects, peer_ends
+    from netbox_spatial_lens.cabling import peer_ends
+    from netbox_spatial_lens.power import resolve_draws
 
     rack_ids = [r.pk for r in racks]
     feeds = list(
@@ -400,34 +401,16 @@ def _floor_power_utilisation(racks: Sequence) -> dict[int, tuple[float, float]]:
     for feed in feeds:
         capacity[feed['rack_id']] = capacity.get(feed['rack_id'], 0) + (feed['available_power'] or 0)
 
-    # feed -> the PDU inlet it supplies
     inlet_peers = peer_ends({f['cable_id']: f['cable_end'] for f in feeds if f['cable_id']})
-    load_objects(inlet_peers.values())
-
-    rack_by_inlet_device = {}
+    port_type = ContentType.objects.get_for_model(PowerPort).pk
+    inlets_by_rack: dict[int, set[int]] = {}
     for feed in feeds:
         end = inlet_peers.get(feed['cable_id'])
-        if end is not None and isinstance(end.obj, PowerPort) and end.device_id:
-            rack_by_inlet_device[end.device_id] = feed['rack_id']
+        if end is not None and end.type_id == port_type:
+            inlets_by_rack.setdefault(feed['rack_id'], set()).add(end.object_id)
 
-    # that PDU's outlets -> the ports plugged into them
-    outlets = list(
-        PowerOutlet.objects.filter(device_id__in=rack_by_inlet_device).values('device_id', 'cable_id', 'cable_end')
-    )
-    draw_peers = peer_ends({o['cable_id']: o['cable_end'] for o in outlets if o['cable_id']})
-
-    downstream_ids = {end.object_id for end in draw_peers.values()}
-    allocated_by_port = dict(PowerPort.objects.filter(pk__in=downstream_ids).values_list('pk', 'allocated_draw'))
-
-    allocated = {}
-    for outlet in outlets:
-        end = draw_peers.get(outlet['cable_id'])
-        if end is None:
-            continue
-        rack_id = rack_by_inlet_device.get(outlet['device_id'])
-        if rack_id is None:
-            continue
-        allocated[rack_id] = allocated.get(rack_id, 0) + (allocated_by_port.get(end.object_id) or 0)
+    draws = resolve_draws({inlet for inlets in inlets_by_rack.values() for inlet in inlets})
+    allocated = {rack_id: sum(draws[inlet][0] for inlet in inlets) for rack_id, inlets in inlets_by_rack.items()}
 
     return {rack_id: (allocated.get(rack_id, 0), watts) for rack_id, watts in capacity.items() if watts}
 

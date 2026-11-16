@@ -7,6 +7,7 @@
 - **Fixed:** the world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
 - **Fixed:** in the layout editor, a second Save after a failure sends only the changes that failed. It sent every change again, so a rack placed by the first Save was refused by the second, and the editor could not finish the save.
 - **Fixed:** the rack view draws a cable between a mounted device and a device of the same rack that has no U position. The cable was dropped when its A end was on the device with no position.
+- **Fixed:** the power figure of a rack on the floor agrees with NetBox in three more cases: a PDU inlet that declares its own draw, a PDU fed by another PDU, and a PDU with a second inlet that no feed of the rack supplies. The floor and the rack view now use the same calculation.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

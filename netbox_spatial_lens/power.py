@@ -15,6 +15,7 @@ from netbox_spatial_lens.cabling import load_objects, peer_ends
 __all__ = (
     'DevicePower',
     'load_device_power',
+    'resolve_draws',
 )
 
 
@@ -129,7 +130,7 @@ def _apply_aggregates(device_ids: Sequence[int], by_device: dict[int, DevicePowe
     # draw for its own electronics on a second inlet, and that is still load on the feed.
     ports = list(PowerPort.objects.filter(device_id__in=feeders).values_list('pk', 'device_id'))
 
-    draws = _resolve_draws({pk for pk, _ in ports})
+    draws = resolve_draws({pk for pk, _ in ports})
     totals: dict[int, list[float]] = {}
     for pk, device_id in ports:
         allocated, maximum = draws.get(pk, (0.0, 0.0))
@@ -144,7 +145,7 @@ def _apply_aggregates(device_ids: Sequence[int], by_device: dict[int, DevicePowe
             power.maximum_watts = maximum
 
 
-def _resolve_draws(port_ids: set[int]) -> dict[int, tuple[float, float]]:
+def resolve_draws(port_ids: set[int]) -> dict[int, tuple[float, float]]:
     """
     What each of `port_ids` draws, following everything plugged in below it.
 
