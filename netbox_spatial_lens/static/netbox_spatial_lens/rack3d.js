@@ -510,6 +510,8 @@ function build(stage, config) {
   stage.controls.maxPolarAngle = Math.PI * 0.56;
 
   applyHighlightColour();
+  // A band restored from the link was picked before this drawing could hear it.
+  if (legendBands('devices').size && mode === 'images') setMode('colour');
   markMode();
   // Starting the stage applies the names setting, which draws the first state through `apply`.
   stage.start(VIEWS, 'angle');
