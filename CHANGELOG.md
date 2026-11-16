@@ -27,6 +27,7 @@
 - **Changed:** a legend band picked in a shared link is named, not given as a colour: `#band-racks=90-and-over`, a provider's name for a circuit band and the kind for a cable band. A link saved before this change loses its band and opens with nothing picked.
 - **Fixed:** the world map opens with every site clear of the legends panel, and a picked band is counted against the sites ("Europe: 4 of 29 sites"), the figure above the map.
 - **Fixed:** the open Sites or Circuits button keeps a readable text colour, a link pasted into a tab that already shows the page is applied, and the cable finder of a rack also finds a cable by its kind, such as "power".
+- **Legends:** the "No data" row is listed only when something falls in it. The map legends are named "Sites by group" and "Circuits by provider". In the rack view, a legend band picked over the device images switches the rack to Colour.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

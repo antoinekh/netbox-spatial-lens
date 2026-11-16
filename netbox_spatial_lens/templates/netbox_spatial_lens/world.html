@@ -87,15 +87,12 @@
             </button>
             <div class="lens-map-legends__body">
               <div class="lens-map-legend">
-                <h3 class="lens-map-legend__title">
-                  {% if overlay %}{{ overlay.label }}{% else %}Legend{% endif %}
-                  <span class="lens-scope">sites</span>
-                </h3>
+                <h3 class="lens-map-legend__title">Sites{% if overlay %} by {{ overlay.label|lower }}{% endif %}</h3>
                 {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.legend filter='sites' %}
               </div>
               {% if world.providers %}
                 <div class="lens-map-legend">
-                  <h3 class="lens-map-legend__title">Provider <span class="lens-scope">circuits</span></h3>
+                  <h3 class="lens-map-legend__title">Circuits by provider</h3>
                   {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.providers filter='circuits' %}
                 </div>
               {% endif %}

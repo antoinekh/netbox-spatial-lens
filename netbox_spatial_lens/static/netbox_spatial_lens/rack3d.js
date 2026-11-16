@@ -484,14 +484,22 @@ function build(stage, config) {
     });
   }
 
-  controlsBar.addEventListener('click', function (event) {
-    const modeButton = event.target.closest('[data-lens-mode]');
-    if (!modeButton) return;
-    mode = modeButton.dataset.lensMode;
+  function setMode(next) {
+    mode = next;
     if (window.lensState) window.lensState.set('mode', mode === 'colour' ? ['colour'] : []);
     deviceViews.forEach((view) => view.paint(mode));
     markMode();
     apply();
+  }
+
+  controlsBar.addEventListener('click', function (event) {
+    const modeButton = event.target.closest('[data-lens-mode]');
+    if (modeButton) setMode(modeButton.dataset.lensMode);
+  });
+
+  // A band is a colour, so picking one over the device images shows the colours it is read by.
+  document.addEventListener('lens:filter', function (event) {
+    if (event.detail.group === 'devices' && event.detail.bands.length && mode === 'images') setMode('colour');
   });
 
   // The rack with the cables rising out of its roof: what the camera frames.

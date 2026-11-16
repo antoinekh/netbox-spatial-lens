@@ -18,6 +18,11 @@ rather than a control, which is what the cabling legend on the floor is.
 <ul class="lens-legend{% if filter %} lens-legend--filterable{% endif %}"
     {% if filter %}data-lens-filter="{{ filter }}"{% endif %}>
   {% for entry in legend %}
+    {% comment %}
+    The no-data band is listed only when something falls in it. A declared band stays at zero,
+    because the bands are the scale; "No data 0" is not part of a scale, it is an absence.
+    {% endcomment %}
+    {% if entry.count or entry.key != 'lens:no-data' %}
     <li{% if not entry.count %} class="is-empty"{% endif %}>
       {% if filter %}
         <button type="button" class="lens-legend__row" data-lens-band="{{ entry.key }}"
@@ -35,6 +40,7 @@ rather than a control, which is what the cabling legend on the floor is.
         </span>
       {% endif %}
     </li>
+    {% endif %}
   {% endfor %}
 
   {% comment %}

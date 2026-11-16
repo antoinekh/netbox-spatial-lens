@@ -94,6 +94,12 @@ class FloorViewTest(ViewTestCase):
         self.assertContains(response, 'No data')
         self.assertContains(response, 'lens-legend__count')
 
+    def test_the_no_data_band_is_listed_only_when_a_rack_falls_in_it(self):
+        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=space')
+        self.assertNotContains(response, 'data-lens-band="lens:no-data"')
+        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=cooling')
+        self.assertContains(response, 'data-lens-band="lens:no-data"')
+
     def test_a_default_colouring_with_no_data_gives_way_to_one_that_has_some(self):
         # The rack has no feed, so Power, the default, has nothing to say; it has a height, so
         # Space does.
