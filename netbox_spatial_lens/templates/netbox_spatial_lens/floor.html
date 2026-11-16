@@ -24,8 +24,8 @@
           {% include 'netbox_spatial_lens/inc/levels.html' with site=object.effective_site floor=object %}
           {% if placed_racks %}
             <div class="btn-group btn-group-sm" role="group" aria-label="Show the floor">
-              <button type="button" class="btn btn-outline-primary active" data-lens-floor-view="3d" aria-pressed="true">3D</button>
-              <button type="button" class="btn btn-outline-primary" data-lens-floor-view="2d" aria-pressed="false">2D</button>
+              <button type="button" class="btn btn-outline-secondary active" data-lens-floor-view="3d" aria-pressed="true">3D</button>
+              <button type="button" class="btn btn-outline-secondary" data-lens-floor-view="2d" aria-pressed="false">2D</button>
             </div>
           {% endif %}
           <div class="btn-group btn-group-sm" role="group" aria-label="Colour the racks by">
@@ -42,7 +42,7 @@
           would make the two facts impossible to read together.
           {% endcomment %}
           <a href="?overlay={{ overlay.name|default:'' }}{% if not show_runs %}&amp;runs=1{% endif %}"
-             class="btn btn-sm btn-outline-primary{% if show_runs %} active{% endif %}"
+             class="btn btn-sm btn-outline-secondary{% if show_runs %} active{% endif %}"
              title="Draw a line between every pair of racks joined by a cable, weighted by how many.">
             <i class="mdi mdi-transit-connection-variant"></i> Cable runs
           </a>
@@ -78,19 +78,19 @@
             <div class="lens-3d__canvas" data-lens-3d-canvas></div>
             <div class="lens-3d__controls" data-lens-3d-controls hidden>
               <div class="btn-group btn-group-sm" role="group" aria-label="Look at the room from">
-                <button type="button" class="btn btn-outline-primary" data-lens-view="top">Top</button>
-                <button type="button" class="btn btn-outline-primary" data-lens-view="angle">3/4</button>
-                <button type="button" class="btn btn-outline-primary" data-lens-view="side">Side</button>
+                <button type="button" class="btn btn-outline-secondary" data-lens-view="top">Top</button>
+                <button type="button" class="btn btn-outline-secondary" data-lens-view="angle">3/4</button>
+                <button type="button" class="btn btn-outline-secondary" data-lens-view="side">Side</button>
               </div>
               <div class="btn-group btn-group-sm" role="group" aria-label="Show each rack as">
-                <button type="button" class="btn btn-outline-primary active" data-lens-rack-display="cabinets" aria-pressed="true">Cabinets</button>
-                <button type="button" class="btn btn-outline-primary" data-lens-rack-display="devices" aria-pressed="false">Devices</button>
+                <button type="button" class="btn btn-outline-secondary active" data-lens-rack-display="cabinets" aria-pressed="true">Cabinets</button>
+                <button type="button" class="btn btn-outline-secondary" data-lens-rack-display="devices" aria-pressed="false">Devices</button>
               </div>
               <div class="btn-group btn-group-sm" role="group" aria-label="Display">
-                <button type="button" class="btn btn-outline-primary" data-lens-labels aria-pressed="false" title="Names">
-                  <i class="mdi mdi-label-outline" aria-hidden="true"></i><span class="visually-hidden">Names</span>
+                <button type="button" class="btn btn-outline-secondary" data-lens-labels aria-pressed="false" title="Names">
+                  <i class="mdi mdi-label-outline" aria-hidden="true"></i> Names
                 </button>
-                <button type="button" class="btn btn-outline-primary" data-lens-fullscreen title="Full screen">
+                <button type="button" class="btn btn-outline-secondary" data-lens-fullscreen title="Full screen">
                   <i class="mdi mdi-fullscreen" aria-hidden="true"></i><span class="visually-hidden">Full screen</span>
                 </button>
               </div>
