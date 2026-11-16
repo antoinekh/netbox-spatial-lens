@@ -16,6 +16,10 @@
     return new URLSearchParams(window.location.hash.slice(1));
   }
 
+  // A link pasted into a tab that already shows this page changes the hash and loads nothing, so
+  // the page is loaded again to read it. Our own writes replace the state and do not fire this.
+  window.addEventListener('hashchange', () => window.location.reload());
+
   window.lensState = {
     get: function (key) {
       return params().getAll(key);
