@@ -537,6 +537,9 @@ class WorldView(generic.ObjectListView):
                             'colour': link.colour,
                             'band': link.band,
                             'url': link.circuit.get_absolute_url(),
+                            'cid': link.circuit.cid,
+                            'status': link.circuit.get_status_display(),
+                            'facts': link.facts,
                         }
                         for link in world.links
                         if link.a.lat is not None and link.z.lat is not None

@@ -86,6 +86,8 @@ class WorldLink:
     colour: str = NO_DATA
     # The band of the circuit legend this circuit falls in.
     band: str = NO_DATA_KEY
+    # The lines under the circuit's name on hover. See `_link_facts`.
+    facts: list = field(default_factory=list)
 
 
 @dataclass
@@ -254,12 +256,32 @@ def _commit_rate(links: Sequence) -> str:
     in kbps, so it is given in the largest unit that leaves a figure under four digits.
     """
     total = sum(getattr(link.circuit, 'commit_rate', None) or 0 for link in links)
-    if not total:
-        return ''
+    return f'{_rate(total)} committed' if total else ''
+
+
+def _rate(kbps: float) -> str:
+    """A rate NetBox records in kbps, in the largest unit that leaves a figure under four digits."""
     for unit, size in (('Tbps', 1_000_000_000), ('Gbps', 1_000_000), ('Mbps', 1_000)):
-        if total >= size:
-            return f'{total / size:g} {unit} committed'
-    return f'{total:g} kbps committed'
+        if kbps >= size:
+            return f'{kbps / size:g} {unit}'
+    return f'{kbps:g} kbps'
+
+
+def _link_facts(circuit, overlay=None, value=None) -> list[tuple[str, str]]:
+    """
+    The lines under a circuit's name on hover, by the same rules as a site's: only what is
+    recorded, and the colouring's reading first unless a line below already says it.
+    """
+    facts = [('Provider', str(circuit.provider)), ('Type', str(circuit.type))]
+    if circuit.tenant:
+        facts.append(('Tenant', str(circuit.tenant)))
+    if circuit.commit_rate:
+        facts.append(('Commit rate', _rate(circuit.commit_rate)))
+    if overlay is not None and value is not None and value.has_data:
+        said = {text for _, text in facts} | {circuit.get_status_display()}
+        if value.label not in said:
+            facts.insert(0, (overlay.label, value.label))
+    return facts
 
 
 def _world_stats(
@@ -457,6 +479,7 @@ def _build_links(nodes: dict, circuits=None, provider_networks=None, overlay=Non
                 label=label,
                 colour=value.colour if value is not None else NO_DATA,
                 band=overlay.band_of(value) if value is not None else NO_DATA_KEY,
+                facts=_link_facts(circuit, overlay, value),
             )
         )
     return links, values

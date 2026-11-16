@@ -745,6 +745,28 @@ class WorldCircuitTest(LensTestCase):
         # The hover card names the reading, which the label does not already say.
         self.assertEqual(link.label, 'CID-1 · Level 3 · Transit')
 
+    def test_the_card_of_a_circuit_lists_what_is_recorded_and_does_not_repeat_the_reading(self):
+        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
+
+        circuit = self.circuit('CID-1', 'Level 3')
+        circuit.commit_rate = 10_000_000
+        circuit.save()
+        by_provider = build_world().links[0]
+        self.assertEqual(by_provider.facts, [('Provider', 'Level 3'), ('Type', 'Transit'), ('Commit rate', '10 Gbps')])
+        # The status is the badge of the card, so the status colouring adds no line for it.
+        by_status = build_world(circuit_overlay=get_circuit_overlay('status')).links[0]
+        self.assertEqual(by_status.facts, by_provider.facts)
+
+    def test_the_page_gives_the_map_the_way_into_each_circuit(self):
+        circuit = self.circuit('CID-1', 'Level 3')
+        user = create_test_user()
+        user.is_superuser = True
+        user.save()
+        self.client.force_login(user)
+        config = self.client.get(reverse('plugins:netbox_spatial_lens:world')).context['map_config']
+        link = config['links'][0]
+        self.assertEqual((link['cid'], link['url'], link['status']), ('CID-1', circuit.get_absolute_url(), 'Active'))
+
     def test_a_circuit_with_no_tenant_is_no_data_by_tenant(self):
         from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
 

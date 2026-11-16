@@ -77,7 +77,7 @@
           {% endcomment %}
           <span class="text-muted lens-scale" data-lens-world-status></span>
           {% include 'netbox_spatial_lens/inc/export.html' with name='World map' colouring=overlay.label %}
-          {% include 'netbox_spatial_lens/inc/help.html' with text='Click a site to open it. Click a circuit to highlight it and its two ends. Sites and Circuits find by name and narrow the map to what you tick; tick one to trace it. Click legend bands to filter; you can pick several. Marker size is the rack count. Escape clears.' %}
+          {% include 'netbox_spatial_lens/inc/help.html' with text='Click a site to open it. Hover a circuit to see its detail. Click a circuit to highlight it and its two ends, and to get the link that opens it. Sites and Circuits find by name and narrow the map to what you tick; tick one to trace it. Click legend bands to filter; you can pick several. Marker size is the rack count. Escape clears.' %}
         </div>
 
         {% if world.site_nodes %}

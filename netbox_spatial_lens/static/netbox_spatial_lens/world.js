@@ -138,6 +138,7 @@
 
   function apply() {
     document.body.classList.toggle('lens-has-selection', Boolean(selection));
+    pinCircuit();
     if (!selection) {
       status.textContent = bandStatus;
       resetLayers();
@@ -178,8 +179,10 @@
         : '1 circuit';
   }
 
-  function select(type, id) {
-    selection = selection && selection.type === type && selection.id === id ? null : { type, id };
+  /* `at` is where on the map the reader clicked, if they did: the card of a selected circuit
+     opens there. */
+  function select(type, id, at) {
+    selection = selection && selection.type === type && selection.id === id ? null : { type, id, at };
     apply();
   }
 
@@ -289,6 +292,53 @@
       links +
       `<div class="lens-card__action">Click to ${esc(node.action.toLowerCase())}</div>`
     );
+  }
+
+  /* What hovering or selecting a circuit shows: the same card a site has. A selected circuit
+     keeps its card on the map, with the link that opens the circuit in NetBox. A line is too
+     thin to make a click on it leave the page, so the click selects and the card holds the way in. */
+  function circuitCard(entry, pinned) {
+    const { link, a, z } = entry;
+    const rows = (link.facts || [])
+      .map(([label, value]) => `<tr><th>${esc(label)}</th><td>${esc(value)}</td></tr>`)
+      .join('');
+    const state = link.status ? `<span class="lens-card__status">${esc(link.status)}</span>` : '';
+    const action = pinned
+      ? `<a class="lens-card__action" href="${esc(link.url)}">Open the circuit</a>`
+      : '<div class="lens-card__action">Click to select</div>';
+    return (
+      `<div class="lens-card__head"><strong>${esc(link.cid)}</strong>${state}</div>` +
+      `<div class="lens-card__links">${esc(a.label)} &rarr; ${esc(z.label)}</div>` +
+      `<table class="lens-card__facts">${rows}</table>` +
+      action
+    );
+  }
+
+  let pinned = null;
+
+  /* Keep the card of the selected circuit on the map, and take it away with the selection. */
+  function pinCircuit() {
+    if (pinned) {
+      // Emptied first, so the close handler below does not clear a selection that just changed.
+      const old = pinned;
+      pinned = null;
+      old.remove();
+    }
+    const entry = selection && selection.type === 'link' ? lines.get(selection.id) : null;
+    if (!map || !entry) return;
+    // A circuit ticked in the finder has no click to open at, so its card opens between its ends.
+    const at = selection.at || [(entry.a.lon + entry.z.lon) / 2, (entry.a.lat + entry.z.lat) / 2];
+    pinned = new maplibregl.Popup({ closeOnClick: false, className: 'lens-card lens-card--pinned', offset: 12 })
+      .setLngLat(at)
+      .setHTML(circuitCard(entry, true))
+      .addTo(map);
+    const mine = pinned;
+    mine.on('close', function () {
+      if (pinned !== mine) return;
+      pinned = null;
+      selection = null;
+      apply();
+    });
   }
 
   /* Handlers before the URL, and a timeout after it.
@@ -550,14 +600,21 @@
       select('node', node.key);
     });
 
-    map.on('mousemove', 'links', function () {
+    map.on('mousemove', 'links', function (event) {
       map.getCanvas().style.cursor = 'pointer';
+      const key = String(event.features[0].properties.id);
+      const entry = lines.get(key);
+      // The selected circuit already has its card on the map.
+      if (!entry || (selection && selection.type === 'link' && selection.id === key)) return popup.remove();
+      popup.setLngLat(event.lngLat).setHTML(circuitCard(entry, false)).addTo(map);
     });
     map.on('mouseleave', 'links', function () {
       map.getCanvas().style.cursor = '';
+      popup.remove();
     });
     map.on('click', 'links', function (event) {
-      select('link', String(event.features[0].properties.id));
+      popup.remove();
+      select('link', String(event.features[0].properties.id), event.lngLat);
     });
   }
 

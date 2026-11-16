@@ -428,6 +428,21 @@
   color: var(--lens-accent);
 }
 
+/* Room for the close button of a card that stays on the map. */
+.lens-card--pinned .lens-card__head {
+  padding-right: .875rem;
+}
+
+a.lens-card__action {
+  display: block;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+a.lens-card__action:hover {
+  text-decoration: underline;
+}
+
 /* ---- card headers ----
  *
  * NetBox's .card-header is a plain block, so a heading and its qualifier ran together as
