@@ -538,6 +538,16 @@ class BulkActionTest(ViewTestCase):
         placement = RackPlacement.objects.get(rack=rack)
         self.assertEqual((placement.floor, float(placement.x), float(placement.rotation)), (self.floor, 250, 180))
 
+    def test_an_import_may_name_the_site_by_its_slug(self):
+        from netbox_spatial_lens.models import RackPlacement
+
+        rack = make_rack(self.site, name='R9')
+        response = self._import(
+            'rackplacement', f'site.slug,floor,rack,x,y\n{self.site.slug},{self.floor.name},R9,250,300\n'
+        )
+        self.assertEqual(response.status_code, 302, response.content[:3000])
+        self.assertEqual(float(RackPlacement.objects.get(rack=rack, floor=self.floor).rotation), 0)
+
     def test_a_placement_outside_the_room_is_refused_on_import(self):
         make_rack(self.site, name='R8')
         response = self._import(

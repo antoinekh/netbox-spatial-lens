@@ -94,9 +94,14 @@ class SiteScopedImportForm(NetBoxModelImportForm):
 
     def __init__(self, data=None, *args, **kwargs) -> None:
         super().__init__(data, *args, **kwargs)
+        # A column the model has a default for may be left out of the file, and keeps the default.
+        defaulted = {field.name for field in self._meta.model._meta.fields if field.has_default()}
+        for name in defaulted & self.fields.keys():
+            self.fields[name].required = False
         if not data:
             return
-        site = Site.objects.filter(name=data.get('site')).first()
+        # By the column's own key: a header such as `site.slug` names the site another way.
+        site = Site.objects.filter(**{self.fields['site'].to_field_name: data.get('site')}).first()
         for name, field in self.fields.items():
             if name == 'floor':
                 field.queryset = Floor.in_site(site) if site else Floor.objects.none()
