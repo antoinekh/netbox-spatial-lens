@@ -93,6 +93,11 @@ class FloorViewTest(ViewTestCase):
         self.assertContains(response, 'No data')
         self.assertContains(response, 'lens-legend__count')
 
+    def test_the_floor_counts_the_racks_not_yet_placed(self):
+        make_rack(self.site, name='R2')
+        response = self.client.get(self.floor.get_absolute_url())
+        self.assertEqual(response.context['unplaced_count'], 1)
+
     def test_a_rack_links_inward_to_its_lens_tab(self):
         response = self.client.get(self.floor.get_absolute_url())
         self.assertContains(response, f'/dcim/racks/{self.rack.pk}/spatial-lens/')

@@ -260,8 +260,8 @@
         <tr>
           <th scope="row">Not yet placed</th>
           <td>
-            {% if unplaced_racks %}
-              <a href="{% url 'plugins:netbox_spatial_lens:floor_layout' pk=object.pk %}">{{ unplaced_racks|length }}</a>
+            {% if unplaced_count %}
+              <a href="{% url 'plugins:netbox_spatial_lens:floor_layout' pk=object.pk %}">{{ unplaced_count }}</a>
             {% else %}
               0
             {% endif %}

@@ -168,7 +168,7 @@ class FloorView(generic.ObjectView):
             'rack_rows': rack_rows(placed),
             'rack_tags': tags_in_use(p.rack for p in placed),
             'field_filters': filters,
-            'unplaced_racks': unplaced_racks(instance, racks=racks),
+            'unplaced_count': unplaced_racks(instance, racks=racks).count(),
             'layers': instance.layers.filter(enabled=True),
             'show_runs': show_runs,
             'runs': runs,
