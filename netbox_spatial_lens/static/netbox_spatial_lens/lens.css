@@ -1310,6 +1310,7 @@
 }
 
 .lens-finder__toggle[aria-expanded='true'] {
+  color: var(--lens-text);
   background: var(--lens-subtle-bg-strong);
   border-color: var(--lens-muted);
 }
