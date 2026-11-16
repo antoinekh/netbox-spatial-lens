@@ -247,8 +247,10 @@ def build_runs(
     near = {}
     near_ends = {}
     for cable_id, end, type_id, object_id, device_id in near_rows:
-        # A cable with both ends in the rack appears twice; the first is the one drawn.
-        if cable_id in near:
+        # A cable with both ends in the rack appears twice, and is drawn once, from an end that
+        # has a U position.
+        held = near.get(cable_id)
+        if held is not None and (held.device_id in order_by_device or device_id not in order_by_device):
             continue
         near[cable_id] = PeerEnd(cable_id, type_id, object_id, device_id, rack.pk)
         near_ends[cable_id] = end

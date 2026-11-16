@@ -91,6 +91,13 @@ class CablingTest(LensTestCase):
         self.assertEqual(len(runs), 1)
         self.assertTrue(runs[0].internal)
 
+    def test_a_cable_from_a_device_with_no_position_is_drawn_from_its_mounted_end(self):
+        shelf = make_device(self.site, self.rack, 'shelf', self.role, self.manufacturer, position=None, interfaces=1)
+        cable(shelf.interfaces.first(), self.switch.interfaces.first())
+        runs = build_elevation(self.rack).runs
+        self.assertEqual([run.local_device for run in runs], [self.switch])
+        self.assertEqual(runs[0].peer_device, shelf)
+
     def test_a_cable_leaving_the_rack_is_not_internal(self):
         other = make_rack(self.site, name='R2', u_height=10)
         far = make_device(self.site, other, 'far', self.role, self.manufacturer, interfaces=1)
