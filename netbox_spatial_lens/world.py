@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from circuits.models import Circuit, CircuitTermination
-from dcim.models import Site
+from dcim.models import Device, Rack, Site
 from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
 
@@ -136,17 +136,12 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
     if not sites:
         return WorldMap(nodes=[], links=[], ungeocoded=ungeocoded)
 
-    # One query for the counts the hover card needs, rather than one per site.
-    counted = {
-        row['pk']: row
-        for row in Site.objects.filter(pk__in=[s.pk for s in sites])
-        # Prefixed, because `racks` and `devices` are reverse accessors on Site and Django
-        # refuses an annotation that shadows a field.
-        .annotate(n_racks=Count('racks', distinct=True), n_devices=Count('devices', distinct=True))
-        .values('pk', 'n_racks', 'n_devices')
-    }
-    rack_counts = {pk: row['n_racks'] for pk, row in counted.items()}
-    busiest = max(rack_counts.values() or [1]) or 1
+    # A query per model: counted in one, the two joins multiply, and the database walks a row
+    # for every rack and device pair of a site before it counts them.
+    site_ids = [site.pk for site in sites]
+    rack_counts = _count_by_site(Rack.objects.all(), site_ids)
+    device_counts = _count_by_site(Device.objects.all(), site_ids)
+    busiest = max(rack_counts.values(), default=1) or 1
 
     # With none given, the same colouring the page would pick: the configured default, which is
     # the site group, else the first registered. A deployment that switches every colouring off
@@ -180,7 +175,7 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
             lat=float(site.latitude),
             lon=float(site.longitude),
             status=site.get_status_display(),
-            facts=_site_facts(site, counted.get(site.pk, {}), overlay, values.get(site.pk)),
+            facts=_site_facts(site, racks, device_counts.get(site.pk, 0), overlay, values.get(site.pk)),
         )
 
     links = _build_links(nodes, circuits)
@@ -195,8 +190,21 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
         links=links,
         ungeocoded=ungeocoded,
         legend=_world_legend(overlay, values, providers),
-        stats=_world_stats(sites, counted, links, ungeocoded, providers),
+        stats=_world_stats(sites, sum(rack_counts.values()), sum(device_counts.values()), links, ungeocoded, providers),
         providers=_provider_legend(links),
+    )
+
+
+def _count_by_site(queryset, site_ids: Sequence[int]) -> dict[int, int]:
+    """
+    How many of `queryset` each site holds. A site with none is absent.
+    """
+    return dict(
+        queryset.filter(site_id__in=site_ids)
+        .order_by()
+        .values('site_id')
+        .annotate(n=Count('pk'))
+        .values_list('site_id', 'n')
     )
 
 
@@ -271,7 +279,8 @@ def _commit_rate(links: Sequence) -> str:
 
 def _world_stats(
     sites: Sequence,
-    counted: Mapping,
+    racks: int,
+    devices: int,
     links: Sequence,
     ungeocoded: Sequence,
     providers: int,
@@ -290,8 +299,6 @@ def _world_stats(
     if not sites:
         return []
 
-    racks = sum(row['n_racks'] for row in counted.values())
-    devices = sum(row['n_devices'] for row in counted.values())
     missing = len(ungeocoded)
 
     stats = [
@@ -303,8 +310,8 @@ def _world_stats(
             value=str(len(sites) + missing),
             detail=f'{missing} without coordinates' if missing else 'all placed',
         ),
-        # These two are summed over the sites on the map, because they come from the same
-        # query that placed them, so they say so rather than claiming the whole estate.
+        # These two are counted over the sites on the map only, so they say so rather than
+        # claiming the whole estate.
         Stat(label='Racks', value=str(racks), detail='in the sites on the map'),
         Stat(label='Devices', value=str(devices), detail='in the sites on the map'),
         Stat(
@@ -320,7 +327,7 @@ def _world_stats(
     return stats
 
 
-def _site_facts(site, counts: Mapping, overlay=None, value=None) -> list[tuple[str, str]]:
+def _site_facts(site, racks: int, devices: int, overlay=None, value=None) -> list[tuple[str, str]]:
     """
     The lines under a site's name on hover.
 
@@ -339,8 +346,8 @@ def _site_facts(site, counts: Mapping, overlay=None, value=None) -> list[tuple[s
         facts.append(('Group', str(site.group)))
     if site.tenant:
         facts.append(('Tenant', str(site.tenant)))
-    facts.append(('Racks', str(counts.get('n_racks', 0))))
-    facts.append(('Devices', str(counts.get('n_devices', 0))))
+    facts.append(('Racks', str(racks)))
+    facts.append(('Devices', str(devices)))
     if site.physical_address:
         # First line only: a hover card is not the place for a postal address.
         facts.append(('Address', site.physical_address.splitlines()[0]))
