@@ -18,6 +18,8 @@
 - **Fixed:** on the 2D plan and in the layout editor, the name of a rack turned to face down the plan is upright. It was drawn upside down.
 - **Import:** floors, rack placements and background layers can be imported from CSV, YAML or JSON with the Import button of each list. A row names its site, then the floor and the rack by name. The button was shown before, with no page behind it.
 - **Fixed:** on the 2D plan, a cable run recedes with its racks when a legend band, the find box or a finder narrows the room, as it does in 3D. The runs stayed at full strength over the dimmed racks.
+- **3D drawings:** the stage is as tall as the window leaves, so the whole room or rack is on the first screen, and a camera preset is fitted again when the window changes size. The world map and the 2D plan follow the same rule.
+- **Floor in 3D:** rack names no longer overlap. A name gives way to a nearer one and comes back when you zoom in, turn the room or hover its rack.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

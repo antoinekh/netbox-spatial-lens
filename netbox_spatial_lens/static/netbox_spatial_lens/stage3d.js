@@ -195,6 +195,7 @@ function createStage(element, lib) {
     renderer.render(scene, camera);
     beforeLabels.forEach((hook) => hook());
     labelRenderer.render(scene, camera);
+    spaceLabels();
     if (moving || tween) requestRender();
   }
 
@@ -252,11 +253,64 @@ function createStage(element, lib) {
     material.depthWrite = !transparent;
   }
 
-  function label(text, className) {
+  // The labels that give way to one another, so two names never sit on top of each other.
+  const spaced = [];
+  // Pixels kept clear between two labels.
+  const LABEL_GAP = 3;
+
+  /* A label over the canvas. A `spaced` one is hidden while a nearer label covers its place: a
+     room of eighty cabinets seen from a corner projects their names onto each other, and a pile
+     of half-covered names reads as none. `userData.priority` keeps a label whatever is nearer,
+     which is how the name of the thing under the pointer stays on show. */
+  function label(text, className, { spaced: givesWay = false } = {}) {
     const node = document.createElement('div');
     node.className = className;
     node.textContent = text;
-    return new CSS2DObject(node);
+    const object = new CSS2DObject(node);
+    if (givesWay) spaced.push(object);
+    return object;
+  }
+
+  const labelPoint = new THREE.Vector3();
+
+  function spaceLabels() {
+    if (!spaced.length) return;
+    const width = host.clientWidth;
+    const height = host.clientHeight;
+    const boxes = [];
+    spaced.forEach(function (object) {
+      const node = object.element;
+      if (!object.visible || node.style.display === 'none') return;
+      // Measured once: the text of a label does not change, and reading a size forces a layout.
+      if (!object.userData.size && node.offsetWidth) {
+        object.userData.size = { w: node.offsetWidth, h: node.offsetHeight };
+      }
+      const size = object.userData.size;
+      if (!size) return;
+      object.getWorldPosition(labelPoint).project(camera);
+      const left = (labelPoint.x * 0.5 + 0.5) * width - size.w * object.center.x;
+      const top = (-labelPoint.y * 0.5 + 0.5) * height - size.h * object.center.y;
+      boxes.push({
+        node,
+        priority: object.userData.priority ? 1 : 0,
+        depth: labelPoint.z,
+        left: left - LABEL_GAP,
+        top: top - LABEL_GAP,
+        right: left + size.w + LABEL_GAP,
+        bottom: top + size.h + LABEL_GAP,
+      });
+    });
+    // Nearest first, so the label that gives way is the one further from the reader.
+    boxes.sort((a, b) => b.priority - a.priority || a.depth - b.depth);
+    const kept = [];
+    boxes.forEach(function (box) {
+      const covered = kept.some(
+        (other) => box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top
+      );
+      // `visibility`, because the label renderer owns `display`.
+      box.node.style.visibility = covered ? 'hidden' : '';
+      if (!covered) kept.push(box);
+    });
   }
 
   /* A polyline with its corners rounded. Each corner is cut back along both of its segments,

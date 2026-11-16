@@ -179,7 +179,7 @@ function build(stage, config) {
     outline.position.y = h / 2;
     group.add(outline);
 
-    const name = stage.label(rack.gauge ? `${rack.name} · ${rack.gauge}` : rack.name, 'lens-3d__name');
+    const name = stage.label(rack.gauge ? `${rack.name} · ${rack.gauge}` : rack.name, 'lens-3d__name', { spaced: true });
     name.position.set(rack.x, h + 60, rack.z);
     name.center.set(0.5, 1);
     scene.add(name);
@@ -370,6 +370,7 @@ function build(stage, config) {
       const lit = hoveredRack === view;
       view.outline.material.opacity = lit ? 1 : 0;
       view.name.visible = kept && (showNames || lit);
+      view.name.userData.priority = lit;
     });
 
     // Cabling belongs to the racks it joins: hovering a rack lights it, and a rack left out by a
