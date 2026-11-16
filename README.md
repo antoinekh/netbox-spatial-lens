@@ -49,13 +49,13 @@ Every room in the site as a small plan with its own figures, on a tab of NetBox'
 
 ### The floor
 
-The room in 3D, every rack a cabinet at its real position, rotation and height, coloured by **power**, **cooling**, **space** or **role**, with the reading rising up its doors and the cable runs arcing over the tops. Look from the top, at three quarters or from the side, and switch from **Cabinets** to **Devices** to see every rack open with its real devices and their front and rear images. Switch to **2D** for the plan over a scanned drawing, with zoom. Both views share a sortable rack table. Find racks by name or asset tag, narrow them by tag or custom field, and place them in the layout editor.
+The room in 3D, every rack a cabinet at its real position, rotation and height, coloured by **power**, **cooling**, **space** or **role**, with the reading rising up its doors and the cable runs arcing over the tops, faint until you hover a rack. Look from the top, at three quarters or from the side, and switch from **Cabinets** to **Devices** to see every rack open with its real devices and their front and rear images. Switch to **2D** for the plan over a scanned drawing, with zoom. Both views share a sortable rack table. Find racks by name or asset tag, narrow them by tag or custom field, and place them in the layout editor.
 
-![A 20.7 by 13.2 metre data hall of 80 cabinets in eight rows of ten, two blocks of four rows either side of a central aisle, their roofs and doors coloured by how full they are, the leaf to spine uplinks arcing from every rack to the two spines in row A, and the hover card of rack G04](docs/images/floor-3d.png)
+![A 20.7 by 13.2 metre data hall of 80 cabinets in eight rows of ten, two blocks of four rows either side of a central aisle, their roofs and doors coloured by how full they are, the cable runs resting faint over the room, the two uplinks of rack E05 lit as it is hovered, and its hover card naming what it is cabled to](docs/images/floor-3d.png)
 
 ![The same hall of 80 racks in the Devices view: every cabinet open with its real devices, roofs coloured by rack role, and the hover card of one switch naming its rack, type and unit](docs/images/floor-devices.png)
 
-![The hall in the Devices view with "c" in the find box: the ten racks of row C stand out with their devices and every other rack fades, and the hover card of one router in C08](docs/images/floor-devices-find.png)
+![The hall in the Devices view with "c" in the find box: the ten racks of row C stand out with their devices and every other rack fades, and the hover card of one switch in C08](docs/images/floor-devices-find.png)
 
 ### The rack
 
