@@ -23,6 +23,7 @@
 - **Toolbars:** only the colouring keeps the primary colour. The 3D and 2D switch, Cable runs, the camera presets and the display controls are neutral buttons, and the Names button says its name.
 - **Figures and site page:** the figures above a drawing stand on the card itself instead of each in a grey tile, with a dot in the colour of their band. On the site page each room is a NetBox card, no longer a box inside a card, and the racks on no floor have a card of their own.
 - **Floor plans:** a floor opened with no colouring named uses the first colouring that has data when the default one has none, and the legend says which one had no data. A floor with no feed recorded opened all grey on Power. A colouring named in the URL is kept as it is.
+- **Floor plans:** the rack table has the look of a NetBox list and scrolls in its own area with its headings held at the top, and the legend column stays in view while the page scrolls.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

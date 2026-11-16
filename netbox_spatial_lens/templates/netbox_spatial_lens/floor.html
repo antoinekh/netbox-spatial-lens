@@ -134,8 +134,8 @@
           <span>Racks</span>
           <span class="badge text-bg-secondary" data-lens-rack-count>{{ rack_rows|length }}</span>
         </h2>
-        <div class="table-responsive">
-          <table class="table table-hover table-sm mb-0 lens-rack-table" data-lens-rack-table>
+        <div class="table-responsive lens-rack-table__scroll">
+          <table class="table table-hover object-list mb-0 lens-rack-table" data-lens-rack-table>
             <thead>
               <tr>
                 <th scope="col" data-sort="text" aria-sort="ascending"><button type="button" class="lens-sort">Rack</button></th>
@@ -204,7 +204,7 @@
     {% endif %}
   </div>
 
-  <div class="col col-md-3">
+  <div class="col col-md-3 lens-side">
     {% if overlay %}
       <div class="card">
         <h2 class="card-header">{{ overlay.label }}</h2>

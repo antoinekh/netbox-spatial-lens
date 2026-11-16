@@ -753,8 +753,28 @@
 /* NetBox writes table headings in capitals; a sort button does not inherit that, so without this
    the one heading that does not sort (Tags) was the only one in capitals. As specific as
    NetBox's own `.table thead th`, so it wins by coming later. */
+/* A window onto the table, with its headings held at the top: eighty racks are a page of rows,
+   and the drawing they belong to is gone by the tenth. */
+.lens-rack-table__scroll {
+  max-height: 30rem;
+  overflow-y: auto;
+}
+
 .table.lens-rack-table thead th {
-  text-transform: none;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--tblr-bg-surface, var(--lens-bg));
+}
+
+/* The legend and the floor's facts stay beside the table as the page scrolls, under NetBox's
+   own header, which is fixed too. */
+@media (min-width: 768px) {
+  .lens-side {
+    position: sticky;
+    top: 4.5rem;
+    align-self: flex-start;
+  }
 }
 
 .lens-rack-table th[data-sort] {
@@ -765,6 +785,8 @@
 .lens-sort {
   padding: 0;
   font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
   color: inherit;
   background: none;
   border: 0;
