@@ -4,6 +4,7 @@
 
 - **Docs:** the README shows a 15 second showreel video below the introduction.
 - **World map:** the racks and the devices of the sites are counted in one query each. Counted together, the database joined every rack of a site with every device of it, so a site of 500 racks and 20,000 devices cost ten million rows.
+- **Floor plans:** the cable run queries no longer join and sort on the cable table, which the totals do not need.
 - **Fixed:** the world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
 - **Fixed:** in the layout editor, a second Save after a failure sends only the changes that failed. It sent every change again, so a rack placed by the first Save was refused by the second, and the editor could not finish the save.
 - **Fixed:** the rack view draws a cable between a mounted device and a device of the same rack that has no U position. The cable was dropped when its A end was on the device with no position.

@@ -109,7 +109,12 @@ def build_floor_runs(placed: Sequence[PlacedRack]) -> list[FloorRun]:
         return []
 
     ends: dict[int, dict[str, set[int]]] = {}
-    rows = CableTermination.objects.filter(_rack_id__in=by_rack).values_list('cable_id', 'cable_end', '_rack_id')
+    # Unordered: the default ordering joins the cable table to sort rows that are summed.
+    rows = (
+        CableTermination.objects.filter(_rack_id__in=by_rack)
+        .order_by()
+        .values_list('cable_id', 'cable_end', '_rack_id')
+    )
     for cable_id, cable_end, rack_id in rows:
         ends.setdefault(cable_id, {'A': set(), 'B': set()})[cable_end].add(rack_id)
 
@@ -123,7 +128,7 @@ def build_floor_runs(placed: Sequence[PlacedRack]) -> list[FloorRun]:
 
     runs = [FloorRun(a=by_rack[a], b=by_rack[b], count=count) for (a, b), count in counts.items()]
     # Heaviest last, so the busiest runs are drawn on top of the ones they cross.
-    runs.sort(key=lambda run: run.count)
+    runs.sort(key=lambda run: (run.count, run.a.rack.pk, run.b.rack.pk))
     return runs
 
 
@@ -227,7 +232,7 @@ def build_floor_exits(placed: Sequence[PlacedRack], floor, user=None) -> list[Fl
     if not by_rack:
         return []
 
-    near = CableTermination.objects.filter(_rack_id__in=by_rack).values_list('cable_id', '_rack_id')
+    near = CableTermination.objects.filter(_rack_id__in=by_rack).order_by().values_list('cable_id', '_rack_id')
     cable_racks: dict[int, set[int]] = {}
     for cable_id, rack_id in near:
         cable_racks.setdefault(cable_id, set()).add(rack_id)
@@ -237,6 +242,7 @@ def build_floor_exits(placed: Sequence[PlacedRack], floor, user=None) -> list[Fl
     far_rows = list(
         CableTermination.objects.filter(cable_id__in=cable_racks)
         .exclude(_rack_id__in=by_rack)
+        .order_by()
         .values_list('cable_id', 'termination_type__model', 'termination_id', '_rack_id', '_site_id')
     )
     if not far_rows:
@@ -261,7 +267,7 @@ def build_floor_exits(placed: Sequence[PlacedRack], floor, user=None) -> list[Fl
     exits = list(counts.values())
     _place_exits(exits, floor)
     # Heaviest last, so a busy exit is drawn over the ones it crosses.
-    exits.sort(key=lambda e: e.count)
+    exits.sort(key=lambda e: (e.count, e.rack.rack.pk, e.label))
     return exits
 
 
