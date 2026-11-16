@@ -344,7 +344,8 @@
       return;
     }
 
-    for (const [rackId, intent] of pending) {
+    // A copy, because a change that is saved leaves `pending` inside the loop.
+    for (const [rackId, intent] of Array.from(pending)) {
       const node = svg.querySelector(`.lens-rack[data-rack-id="${rackId}"]`);
       try {
         if (intent === 'create') {
@@ -367,6 +368,8 @@
           const id = placementIds.get(rackId);
           if (id !== undefined) await request('DELETE', `${config.placementsUrl}${id}/`);
         }
+        // A second Save after a failure must not send a create twice: the API refuses it.
+        pending.delete(rackId);
         if (node) node.classList.remove('is-dirty');
       } catch (error) {
         failures.push(`${rackId}: ${error.message}`);
@@ -374,15 +377,13 @@
     }
 
     if (failures.length) {
-      // The failed racks keep their pending state, so pressing Save again retries only those.
+      refreshControls();
       status.textContent = `${failures.length} change${failures.length === 1 ? '' : 's'} failed. See the console.`;
       status.classList.add('text-danger');
       console.error('netbox-spatial-lens could not save:', failures);
-      saveButton.disabled = false;
       return;
     }
 
-    pending.clear();
     status.classList.remove('text-danger');
     // After refreshControls, which clears the message when nothing is pending. Setting it
     // first meant "Saved" was wiped in the same breath and the save looked like it did
