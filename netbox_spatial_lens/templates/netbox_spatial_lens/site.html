@@ -17,72 +17,75 @@ This is the contents page of the site: which rooms it has, how full each one is,
 each. A site with one room is a page with one plan on it, which is the cost of never telling a
 site with four rooms that it has one.
 {% endcomment %}
-<div class="card lens-card--drawing">
-  <div class="card-body">
-
-    <div class="lens-toolbar">
-      {% include 'netbox_spatial_lens/inc/levels.html' with site=object %}
-      <div class="btn-group btn-group-sm" role="group" aria-label="Colour the racks by">
-        {% for o in overlays %}
-          <a href="?overlay={{ o.name }}"
-             class="btn btn-outline-primary{% if overlay and o.name == overlay.name %} active{% endif %}"
-             {% if overlay and o.name == overlay.name %}aria-current="true"{% endif %}
-             title="{{ o.description }}">{{ o.label }}</a>
-        {% endfor %}
-      </div>
-    </div>
-
-    {% if rooms %}
-      <div class="lens-rooms">
-        {% for room in rooms %}
-          <div class="lens-room">
-            <a class="lens-room__head" href="{{ room.floor.get_absolute_url }}">
-              <span class="lens-room__name">{{ room.floor.name }}</span>
-              {% if room.floor.location %}
-                <span class="lens-room__where">{{ room.floor.location }}</span>
-              {% endif %}
-            </a>
-            {% include 'netbox_spatial_lens/inc/stats.html' with stats=room.stats %}
-            {% if room.placed %}
-              {% comment %}
-              The same plan the floor page draws, at thumbnail size and without the cable runs
-              or the hover cards. Small enough to compare four rooms at a glance, and it is the
-              real layout rather than an icon, so a half-empty hall looks half empty here too.
-              {% endcomment %}
-              <a class="lens-room__plan" href="{{ room.floor.get_absolute_url }}"
-                 aria-label="Open {{ room.floor.name }}">
-                {% include 'netbox_spatial_lens/inc/floor_svg.html' with floor=room.floor view=room.view x_ticks=room.x_ticks y_ticks=room.y_ticks placed_racks=room.placed linkify=False %}
-              </a>
-            {% else %}
-              <p class="text-muted small lens-room__empty">No rack has been placed in this room yet.</p>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted">
-        No room has been drawn for this site.
-        {% if perms.netbox_spatial_lens.add_floor %}
-          <a href="{% url 'plugins:netbox_spatial_lens:floor_add' %}?site={{ object.pk }}">Add a floor</a> to start one.
-        {% endif %}
-      </p>
-    {% endif %}
-
-    {% if unplaced %}
-      {% comment %}
-      The honesty rule at this level: a rack in the site that stands on no floor is named here
-      rather than being absent from every plan and therefore from every tally.
-      {% endcomment %}
-      <div class="lens-room__unplaced">
-        <h3 class="h6">Not on any floor <span class="badge text-bg-secondary">{{ unplaced|length }}</span></h3>
-        <ul class="list-inline">
-          {% for rack in unplaced %}
-            <li class="list-inline-item"><a href="{% url 'dcim:rack_lens' pk=rack.pk %}">{{ rack.name }}</a></li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
-
+<div class="lens-toolbar">
+  {% include 'netbox_spatial_lens/inc/levels.html' with site=object %}
+  <div class="btn-group btn-group-sm" role="group" aria-label="Colour the racks by">
+    {% for o in overlays %}
+      <a href="?overlay={{ o.name }}"
+         class="btn btn-outline-primary{% if overlay and o.name == overlay.name %} active{% endif %}"
+         {% if overlay and o.name == overlay.name %}aria-current="true"{% endif %}
+         title="{{ o.description }}">{{ o.label }}</a>
+    {% endfor %}
   </div>
 </div>
+
+{% if rooms %}
+  <div class="lens-rooms">
+    {% for room in rooms %}
+      <div class="card lens-room-card">
+        <h2 class="card-header">
+          <a href="{{ room.floor.get_absolute_url }}">{{ room.floor.name }}</a>
+          {% if room.floor.location %}
+            <span class="lens-scope">{{ room.floor.location }}</span>
+          {% endif %}
+        </h2>
+        <div class="card-body">
+          {% include 'netbox_spatial_lens/inc/stats.html' with stats=room.stats %}
+          {% if room.placed %}
+            {% comment %}
+            The same plan the floor page draws, at thumbnail size and without the cable runs
+            or the hover cards. Small enough to compare four rooms at a glance, and it is the
+            real layout rather than an icon, so a half-empty hall looks half empty here too.
+            {% endcomment %}
+            <a class="lens-room-card__plan" href="{{ room.floor.get_absolute_url }}"
+               aria-label="Open {{ room.floor.name }}">
+              {% include 'netbox_spatial_lens/inc/floor_svg.html' with floor=room.floor view=room.view x_ticks=room.x_ticks y_ticks=room.y_ticks placed_racks=room.placed linkify=False %}
+            </a>
+          {% else %}
+            <p class="text-muted small mb-0">No rack has been placed in this room yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body text-muted">
+      No room has been drawn for this site.
+      {% if perms.netbox_spatial_lens.add_floor %}
+        <a href="{% url 'plugins:netbox_spatial_lens:floor_add' %}?site={{ object.pk }}">Add a floor</a> to start one.
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+{% if unplaced %}
+  {% comment %}
+  The honesty rule at this level: a rack in the site that stands on no floor is named here
+  rather than being absent from every plan and therefore from every tally.
+  {% endcomment %}
+  <div class="card">
+    <h2 class="card-header">
+      <span>Not on any floor</span>
+      <span class="badge text-bg-secondary">{{ unplaced|length }}</span>
+    </h2>
+    <div class="card-body">
+      <ul class="list-inline mb-0">
+        {% for rack in unplaced %}
+          <li class="list-inline-item"><a href="{% url 'dcim:rack_lens' pk=rack.pk %}">{{ rack.name }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endif %}
 {% endblock %}

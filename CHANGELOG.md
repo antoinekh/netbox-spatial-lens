@@ -21,6 +21,7 @@
 - **3D drawings:** the stage is as tall as the window leaves, so the whole room or rack is on the first screen, and a camera preset is fitted again when the window changes size. The world map and the 2D plan follow the same rule.
 - **Floor in 3D:** rack names no longer overlap. A name gives way to a nearer one and comes back when you zoom in, turn the room or hover its rack.
 - **Toolbars:** only the colouring keeps the primary colour. The 3D and 2D switch, Cable runs, the camera presets and the display controls are neutral buttons, and the Names button says its name.
+- **Figures and site page:** the figures above a drawing stand on the card itself instead of each in a grey tile, with a dot in the colour of their band. On the site page each room is a NetBox card, no longer a box inside a card, and the racks on no floor have a card of their own.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

@@ -153,10 +153,12 @@
  * A figure that falls in a palette band wears that band as a rule down its left edge, which is
  * the same device a trace hop uses to carry its kind. The strip and the plan are then two
  * readings of one set of facts. */
+/* Figures on the card itself, not each in a box of its own: the card is the frame, and a tile
+   inside it is a second one. */
 .lens-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-  gap: .5rem;
+  gap: .75rem 1.5rem;
   margin-bottom: .875rem;
 }
 
@@ -164,14 +166,17 @@
   display: flex;
   flex-direction: column;
   gap: .0625rem;
-  padding: .5rem .75rem;
-  border-radius: .375rem;
-  background: rgba(127, 127, 127, .07);
-  border-left: 3px solid transparent;
 }
 
-.lens-stat--toned {
-  border-left-color: var(--lens-stat-tone);
+/* The band a figure falls in, as a dot of the band's colour before its name. */
+.lens-stat--toned .lens-stat__label::before {
+  content: '';
+  display: inline-block;
+  width: .5rem;
+  height: .5rem;
+  margin-right: .375rem;
+  border-radius: 50%;
+  background: var(--lens-stat-tone);
 }
 
 .lens-stat__label {
@@ -1441,58 +1446,27 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
   gap: 1rem;
-  margin-top: .75rem;
+  margin-bottom: 1rem;
 }
 
-.lens-room {
-  border: 1px solid var(--tblr-border-color);
-  border-radius: var(--tblr-border-radius);
-  padding: .75rem;
-  display: flex;
-  flex-direction: column;
-  gap: .5rem;
-}
-
-.lens-room__head {
-  display: flex;
-  align-items: baseline;
-  gap: .5rem;
-  text-decoration: none;
-}
-
-.lens-room__name {
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.lens-room__where {
-  font-size: .8125rem;
-  color: var(--tblr-secondary);
+.lens-room-card {
+  margin: 0;
 }
 
 /* The thumbnail overrides the full-page plan height. Everything else about the drawing is
    the same markup, so a room cannot be drawn one way here and another way there. */
 /* The thumbnail is a link, and the drawing inside it is `currentColor` throughout: without this
    the rack names, the room outline and the scale all took the theme's link colour. */
-.lens-room__plan,
-.lens-room__plan:hover {
+.lens-room-card__plan,
+.lens-room-card__plan:hover {
   display: block;
   color: inherit;
 }
 
-.lens-room__plan .lens-floor {
+.lens-room-card__plan .lens-floor {
   height: 16rem;
   min-height: 0;
   margin-inline: auto;
-}
-
-.lens-room__empty,
-.lens-room__unplaced {
-  margin: 0;
-}
-
-.lens-room__unplaced {
-  margin-top: 1rem;
 }
 
 /* The finder above the cabling list. Full width of the card, so its panel has room to show a
