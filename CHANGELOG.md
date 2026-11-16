@@ -30,6 +30,7 @@
 - **Cable runs:** with Cable runs on, the runs between racks rest faint and the runs of the rack under the pointer are drawn in full, on the 2D plan and in 3D. The hover card of a rack says what it is cabled to, for example "12 cables to 2 racks, 3 off the floor".
 - **Pages:** the world map has a page title. On the floor page and in the layout editor, the way up ("World map / site") is in the NetBox breadcrumb above the title, and no longer in a second strip inside the card. The site and rack tabs keep the strip, because their breadcrumb belongs to NetBox.
 - **Docs:** the README shows a 15 second showreel video below the introduction.
+- **Docs:** the README no longer carries the "Not stable yet" warning, and the section "Where the ideas come from" is collapsed until opened.
 
 ### Performance
 
