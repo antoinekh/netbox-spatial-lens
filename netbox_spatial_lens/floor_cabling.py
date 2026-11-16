@@ -242,7 +242,7 @@ def build_floor_exits(placed: Sequence[PlacedRack], floor, user=None) -> list[Fl
     if not far_rows:
         return []
 
-    resolved = _resolve_far_ends(far_rows, user)
+    resolved = _resolve_far_ends(far_rows, user, home_site_id=floor.effective_site.pk)
 
     counts: dict[tuple[int, str], FloorExit] = {}
     for cable_id, model, termination_id, _, _ in far_rows:
@@ -269,11 +269,13 @@ def _restricted(queryset, user):
     return queryset if user is None else queryset.restrict(user, 'view')
 
 
-def _resolve_far_ends(rows, user=None) -> dict[tuple[str, int], _FarEnd]:
+def _resolve_far_ends(rows, user=None, home_site_id: int | None = None) -> dict[tuple[str, int], _FarEnd]:
     """
     Name every off-floor termination, one query per kind of thing rather than one per cable.
 
     Each name comes from an object the reader may view, or the far end is left unresolved.
+    So is a far end in no rack of `home_site_id`, the floor's own site: it left the plan, not
+    the site.
     """
     from circuits.models import Circuit, CircuitTermination
     from dcim.models import Site
@@ -318,7 +320,7 @@ def _resolve_far_ends(rows, user=None) -> dict[tuple[str, int], _FarEnd]:
 
     # A far end with no rack at all still usually knows its site, which is enough to say the
     # cable leaves the building rather than merely the room.
-    site_ids = {site_id for _, _, _, _, site_id in rows if site_id}
+    site_ids = {site_id for _, _, _, _, site_id in rows if site_id and site_id != home_site_id}
     sites = (
         dict(_restricted(Site.objects.all(), user).filter(pk__in=site_ids).values_list('pk', 'name'))
         if site_ids

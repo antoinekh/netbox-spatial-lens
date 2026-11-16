@@ -165,6 +165,21 @@ class FloorExitTest(LensTestCase):
         self.assertEqual(exits[0].kind, 'rack')
         self.assertIn('RZ', exits[0].label)
 
+    def test_a_far_end_in_no_rack_of_this_site_is_not_another_site(self):
+        unracked = make_device(self.site, None, 'wall', self.role, self.manufacturer, position=None, interfaces=1)
+        cable(self.device.interfaces.all()[0], unracked.interfaces.all()[0])
+        exits = build_floor_exits(build_layout(self.floor, None), self.floor)
+        self.assertEqual([item.kind for item in exits], ['other'])
+
+    def test_a_far_end_in_no_rack_of_another_site_is_named_by_that_site(self):
+        from dcim.models import Site
+
+        branch = Site.objects.create(name='Branch', slug='branch')
+        unracked = make_device(branch, None, 'far-wall', self.role, self.manufacturer, position=None, interfaces=1)
+        cable(self.device.interfaces.all()[0], unracked.interfaces.all()[0])
+        exits = build_floor_exits(build_layout(self.floor, None), self.floor)
+        self.assertEqual([(item.kind, item.label) for item in exits], [('site', 'Branch')])
+
     def test_one_cable_to_a_rack_elsewhere_opens_that_cable(self):
         # The stub is a drawing of cabling, so clicking it has to land on cabling. It used to
         # go to the far rack's page, which answered a question nobody had asked of the line.
@@ -208,5 +223,5 @@ class FloorExitTest(LensTestCase):
         for index in range(3):
             cable(self.device.interfaces.all()[index], self.circuit_end(cid=f'CID-{index}'))
         placed = build_layout(self.floor, None)
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(3):
             build_floor_exits(placed, self.floor)
