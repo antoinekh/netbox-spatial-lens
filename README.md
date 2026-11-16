@@ -24,9 +24,6 @@ A NetBox plugin. NetBox knows a rack's height, footprint, power feeds and coolin
 
 https://github.com/user-attachments/assets/15360e00-abfa-40f1-a338-959fd32c0023
 
-> [!WARNING]
-> **Not stable yet.** The version is below 1.0. Models, settings and APIs can still change between releases. Read the [changelog](CHANGELOG.md) before you upgrade.
-
 <p align="center">
   <a href="#what-it-does">What it does</a> |
   <a href="#getting-started">Getting started</a> |
