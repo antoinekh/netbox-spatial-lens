@@ -41,6 +41,11 @@ __all__ = (
 )
 
 
+# A stable order for termination rows, so "the first end of a cable" is the same on every read.
+# By the cable's id column: the model's own ordering sorts by the cable, which joins its table.
+TERMINATION_ORDER = ('cable_id', 'cable_end', 'pk')
+
+
 class PeerEnd:
     """
     The far end of one cable, as far as the database rows describe it.
@@ -85,8 +90,10 @@ def peer_ends(near_ends: Mapping[int, str]) -> dict[int, PeerEnd]:
     if not near_ends:
         return {}
 
-    rows = CableTermination.objects.filter(cable_id__in=near_ends).values_list(
-        'cable_id', 'cable_end', 'termination_type_id', 'termination_id', '_device_id', '_rack_id'
+    rows = (
+        CableTermination.objects.filter(cable_id__in=near_ends)
+        .order_by(*TERMINATION_ORDER)
+        .values_list('cable_id', 'cable_end', 'termination_type_id', 'termination_id', '_device_id', '_rack_id')
     )
 
     peers = {}
@@ -241,8 +248,10 @@ def build_runs(
         return []
 
     # Our own ends first: every termination in this rack that carries a cable.
-    near_rows = CableTermination.objects.filter(_device_id__in=device_ids).values_list(
-        'cable_id', 'cable_end', 'termination_type_id', 'termination_id', '_device_id'
+    near_rows = (
+        CableTermination.objects.filter(_device_id__in=device_ids)
+        .order_by(*TERMINATION_ORDER)
+        .values_list('cable_id', 'cable_end', 'termination_type_id', 'termination_id', '_device_id')
     )
     near = {}
     near_ends = {}

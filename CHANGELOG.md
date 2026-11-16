@@ -5,6 +5,7 @@
 - **Docs:** the README shows a 15 second showreel video below the introduction.
 - **World map:** the racks and the devices of the sites are counted in one query each. Counted together, the database joined every rack of a site with every device of it, so a site of 500 racks and 20,000 devices cost ten million rows.
 - **Floor Devices view:** the server answers faster on a large floor. The tags of all the devices are read in one query, and each device type and role is read once instead of once per device: about 1 s before and 350 ms after on a hall of 80 racks and 2,200 devices.
+- **Rack view:** the cable queries of a rack no longer join the cable table to sort their rows.
 - **Floor plans:** the cable run queries no longer join and sort on the cable table, which the totals do not need, and the racks not yet placed are counted by the database instead of read in full.
 - **Fixed:** the world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
 - **Fixed:** in the layout editor, a second Save after a failure sends only the changes that failed. It sent every change again, so a rack placed by the first Save was refused by the second, and the editor could not finish the save.
