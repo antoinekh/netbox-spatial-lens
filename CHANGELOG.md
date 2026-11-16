@@ -29,6 +29,7 @@
 - **Fixed:** the open Sites or Circuits button keeps a readable text colour, a link pasted into a tab that already shows the page is applied, and the cable finder of a rack also finds a cable by its kind, such as "power".
 - **Legends:** the "No data" row is listed only when something falls in it. The map legends are named "Sites by group" and "Circuits by provider". In the rack view, a legend band picked over the device images switches the rack to Colour.
 - **Legends:** a picked band no longer has a blue bar on its left edge; the darker row and the bold text mark it.
+- **Filtered state:** what a legend band, the find box or a finder leaves out is dimmed less (35 % on the plans and the map, 30 % for cabinets in 3D), so the room keeps its shape. A finder lists only the rows the legend leaves in and says how many. The world map moves to the sites of the picked bands, and back to the estate when the band is cleared.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

@@ -17,7 +17,7 @@ const configNode = document.getElementById('lens-rack3d-config');
 
 // Opacity of a device or cable that is out of focus: left out by a filter, or not part of the
 // selection. A filter hides harder than a selection, which only puts the rest behind glass.
-const FILTERED_OPACITY = 0.08;
+const FILTERED_OPACITY = 0.2;
 const DIMMED_DEVICE_OPACITY = 0.2;
 const RELATED_DEVICE_OPACITY = 0.5;
 const DIMMED_CABLE_OPACITY = 0.1;

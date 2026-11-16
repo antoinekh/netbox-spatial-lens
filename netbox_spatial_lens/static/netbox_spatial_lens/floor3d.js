@@ -22,7 +22,7 @@ const element = document.querySelector('[data-lens-3d]');
 const configNode = document.getElementById('lens-floor3d-config');
 
 // Opacity of a rack left out by a filter.
-const FILTERED_OPACITY = 0.12;
+const FILTERED_OPACITY = 0.3;
 // How far a door stands off its cabinet, in millimetres: far enough to stay in front of it at
 // room scale.
 const DOOR_OFFSET = 6;

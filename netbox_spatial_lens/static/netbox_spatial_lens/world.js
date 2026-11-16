@@ -63,6 +63,28 @@
   const totalSites = config.nodes.filter((node) => node.kind === 'site').length;
   const PROVIDER_BAND = 'lens:provider';
 
+  let mapReady = false;
+
+  /* Move the camera to the points the picked bands leave on the map, or to the whole estate when
+     no band is picked, so narrowing to four sites shows the four and not the ocean between them. */
+  function fitToBands({ animate }) {
+    if (!mapReady) return;
+    const kept = config.nodes.filter(inBand);
+    const nodes = kept.length ? kept : config.nodes;
+    const box = nodes.reduce(
+      (bounds, node) => bounds.extend([node.lon, node.lat]),
+      new window.maplibregl.LngLatBounds([nodes[0].lon, nodes[0].lat], [nodes[0].lon, nodes[0].lat])
+    );
+    // The legends float over the right of the map, so the points are fitted to what is left of it.
+    const legends = document.querySelector('[data-lens-legends]');
+    const covered = legends && mapEl.clientWidth > legends.offsetWidth * 3 ? legends.offsetWidth + 24 : 0;
+    map.fitBounds(box, {
+      padding: { top: 60, bottom: 60, left: 60, right: 60 + covered },
+      maxZoom: 9,
+      animate: animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    });
+  }
+
   /* Whether a node survives the legend filter.
    *
    * Two filters act on this map and they compose rather than replace: picking a group narrows
@@ -190,6 +212,7 @@
     // After apply(), which rewrites the status line for a selection and would otherwise wipe
     // this in the same breath.
     if (bands.length) status.textContent = bandStatus;
+    fitToBands({ animate: true });
   });
 
   /* ----------------------------------------------------------------------
@@ -446,7 +469,7 @@
       paint: {
         'line-color': byState(['get', 'colour'], palette.highlight, ['get', 'colour']),
         'line-width': byState(['get', 'width'], ['+', ['get', 'width'], 2], ['get', 'width']),
-        'line-opacity': byState(0.12, 1, 0.6),
+        'line-opacity': byState(0.2, 1, 0.6),
       },
     });
 
@@ -458,10 +481,10 @@
       paint: {
         'circle-radius': ['get', 'radius'],
         'circle-color': ['get', 'colour'],
-        'circle-opacity': byState(0.15, 0.9, 0.85),
+        'circle-opacity': byState(0.35, 0.9, 0.85),
         'circle-stroke-color': ['get', 'colour'],
         'circle-stroke-width': ['case', ['boolean', ['feature-state', 'primary'], false], 4, 2],
-        'circle-stroke-opacity': byState(0.2, 1, 1),
+        'circle-stroke-opacity': byState(0.4, 1, 1),
       },
     });
 
@@ -634,14 +657,8 @@
       settle();
     });
 
-    // The legends float over the right of the map, so the estate is fitted to what is left of it.
-    const legends = document.querySelector('[data-lens-legends]');
-    const covered = legends && mapEl.clientWidth > legends.offsetWidth * 3 ? legends.offsetWidth + 24 : 0;
-    map.fitBounds(bounds, {
-      padding: { top: 60, bottom: 60, left: 60, right: 60 + covered },
-      maxZoom: 9,
-      animate: false,
-    });
+    mapReady = true;
+    fitToBands({ animate: false });
     message.hidden = true;
     apply();
   }

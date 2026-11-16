@@ -65,19 +65,7 @@
     });
     finder.classList.toggle('is-picking', Boolean(chosen.size));
 
-    const total = rowsOf(finder).length;
-    // The button says how far the drawing is narrowed while its panel is shut: "2/28" once two
-    // rows are ticked, and the plain total when none is.
-    const count = finder.querySelector('[data-lens-finder-count]');
-    if (count) {
-      count.textContent = chosen.size ? `${chosen.size}/${total}` : String(total);
-      count.classList.toggle('text-bg-primary', Boolean(chosen.size));
-      count.classList.toggle('text-bg-secondary', !chosen.size);
-    }
-    const noun = finder.dataset.lensFinderNoun || 'row';
-    finder.querySelector('[data-lens-finder-summary]').textContent = chosen.size
-      ? `${chosen.size} of ${total} picked`
-      : `${total} ${noun}${total === 1 ? '' : 's'}`;
+    summarise(finder);
     finder.querySelector('[data-lens-finder-clear]').hidden = !chosen.size;
 
     if (window.lensState) window.lensState.set(`pick-${group}`, [...chosen]);
@@ -88,6 +76,31 @@
       })
     );
   }
+
+  /* What the button and the foot of the panel say: how many rows are ticked, or how many the
+     legend has left to tick. */
+  function summarise(finder) {
+    const chosen = picked.get(finder.dataset.lensFinder);
+    const rows = [...rowsOf(finder)];
+    const total = rows.length;
+    const offered = rows.filter((row) => !row.classList.contains('is-filtered')).length;
+    // The button says how far the drawing is narrowed while its panel is shut: "2/28" once two
+    // rows are ticked, and the plain total when none is.
+    const count = finder.querySelector('[data-lens-finder-count]');
+    if (count) {
+      count.textContent = chosen.size ? `${chosen.size}/${total}` : String(total);
+      count.classList.toggle('text-bg-primary', Boolean(chosen.size));
+      count.classList.toggle('text-bg-secondary', !chosen.size);
+    }
+    const noun = finder.dataset.lensFinderNoun || 'row';
+    const nouns = `${noun}${total === 1 ? '' : 's'}`;
+    let summary = offered < total ? `${offered} of ${total} ${nouns}` : `${total} ${nouns}`;
+    if (chosen.size) summary = `${chosen.size} of ${total} picked`;
+    finder.querySelector('[data-lens-finder-summary]').textContent = summary;
+  }
+
+  // A legend band changes which rows are offered.
+  document.addEventListener('lens:filter', () => finders.forEach(summarise));
 
   function filterRows(finder, term) {
     const needle = term.trim().toLowerCase();

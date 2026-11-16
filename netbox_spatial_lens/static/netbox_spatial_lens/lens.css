@@ -267,7 +267,7 @@
  * class and clears it wholesale on every click, so sharing it would have made picking a band and
  * selecting a device cancel each other out at random. */
 .is-filtered {
-  opacity: .14;
+  opacity: .35;
   pointer-events: none;
 }
 
@@ -829,7 +829,7 @@
 
 .lens-rack.is-searched-out,
 .lens-rack.is-unfocused {
-  opacity: .14;
+  opacity: .35;
   pointer-events: none;
 }
 
@@ -1316,6 +1316,11 @@
 
 .lens-finder__toggle[aria-expanded='true'] .lens-finder__caret {
   transform: rotate(180deg);
+}
+
+/* A row the legend leaves out is not offered: a list of faded rows hides the few that remain. */
+.lens-finder__row.is-filtered {
+  display: none;
 }
 
 /* Marked while the group is narrowed, so the button says so without the script knowing which
