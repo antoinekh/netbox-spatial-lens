@@ -417,6 +417,8 @@ class WorldView(generic.ObjectListView):
             # Restricted like the sites are: the map must not become a way to read circuits a
             # user may not open anywhere else in NetBox.
             circuits=Circuit.objects.restrict(request.user, 'view'),
+            racks=Rack.objects.restrict(request.user, 'view'),
+            devices=Device.objects.restrict(request.user, 'view'),
         )
 
         # Where a site marker takes you: its one room where it has one, the site's rooms where

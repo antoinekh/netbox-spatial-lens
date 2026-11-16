@@ -105,7 +105,7 @@ class WorldMap:
         return [n for n in self.nodes if n.kind == 'site']
 
 
-def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
+def build_world(sites_queryset=None, overlay=None, circuits=None, racks=None, devices=None) -> WorldMap:
     """
     Every geocoded site, and the circuits joining them.
 
@@ -124,6 +124,10 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
     `circuits` is restricted the same way, and for the same reason: a user allowed to see the
     sites but not the circuits between them should not be handed every CID, provider and commit
     rate in the estate because the lines happen to be drawn on a map they may open.
+
+    `racks` and `devices` are restricted too, for the counts: a site's marker is sized by its
+    racks, and a count that includes cabinets the reader may not open says something the site's
+    own page would not.
     """
     base = Site.objects.all() if sites_queryset is None else sites_queryset
     # The hover card names the region, the group and the tenant, so they are fetched with the
@@ -139,8 +143,8 @@ def build_world(sites_queryset=None, overlay=None, circuits=None) -> WorldMap:
     # A query per model: counted in one, the two joins multiply, and the database walks a row
     # for every rack and device pair of a site before it counts them.
     site_ids = [site.pk for site in sites]
-    rack_counts = _count_by_site(Rack.objects.all(), site_ids)
-    device_counts = _count_by_site(Device.objects.all(), site_ids)
+    rack_counts = _count_by_site(Rack.objects.all() if racks is None else racks, site_ids)
+    device_counts = _count_by_site(Device.objects.all() if devices is None else devices, site_ids)
     busiest = max(rack_counts.values(), default=1) or 1
 
     # With none given, the same colouring the page would pick: the configured default, which is

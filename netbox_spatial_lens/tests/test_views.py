@@ -791,3 +791,9 @@ class PermissionTest(TestCase):
         response = self.client.get(self.floor.get_absolute_url())
         racks = next(s for s in response.context['stats'] if s.label == 'Racks')
         self.assertEqual(racks.value, '1')
+
+    def test_the_map_counts_only_the_racks_the_reader_may_see(self):
+        Site.objects.filter(pk=self.site.pk).update(latitude=51.5, longitude=-0.1)
+        response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
+        racks = next(s for s in response.context['world'].stats if s.label == 'Racks')
+        self.assertEqual(racks.value, '1')

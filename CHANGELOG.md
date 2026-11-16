@@ -4,6 +4,7 @@
 
 - **Docs:** the README shows a 15 second showreel video below the introduction.
 - **World map:** the racks and the devices of the sites are counted in one query each. Counted together, the database joined every rack of a site with every device of it, so a site of 500 racks and 20,000 devices cost ten million rows.
+- **Fixed:** the world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)
