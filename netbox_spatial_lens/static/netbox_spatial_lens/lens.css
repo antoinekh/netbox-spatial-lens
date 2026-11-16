@@ -446,9 +446,12 @@
  * hover card in the corners. Shared by the rack and the floor. The ground is a soft light from
  * above rather than a flat fill, so what is drawn stands on something in both themes. */
 
+/* As tall as the window leaves under NetBox's header, the tabs, the toolbar and the figures, so
+   the whole drawing is on the first screen: a share of the window's height ignored what stands
+   above the stage, and the foot of the room was under the fold. */
 .lens-3d {
-  height: 74vh;
-  min-height: 28rem;
+  height: calc(100vh - 25rem);
+  min-height: 24rem;
   border-radius: .375rem;
   overflow: hidden;
   background:
@@ -580,7 +583,7 @@
   display: block;
   width: 100%;
   height: auto;
-  max-height: 72vh;
+  max-height: max(24rem, calc(100vh - 21rem));
   min-height: 12rem;
   touch-action: none;
 }
@@ -1049,7 +1052,7 @@
 /* The tile map. Height rather than aspect ratio: a map is a window onto the world, not a
    picture with a fixed shape. */
 .lens-map {
-  height: 72vh;
+  height: calc(100vh - 17rem);
   min-height: 22rem;
   border-radius: .375rem;
   z-index: 0;

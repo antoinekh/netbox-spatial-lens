@@ -365,7 +365,11 @@ function createStage(element, lib) {
     if (t >= 1) tween = null;
   }
 
+  // The preset the camera stands on, or null once the reader has moved it.
+  let activeView = null;
+
   function markView(name) {
+    activeView = name;
     controlsBar.querySelectorAll('[data-lens-view]').forEach(function (button) {
       button.classList.toggle('active', button.dataset.lensView === name);
     });
@@ -540,6 +544,9 @@ function createStage(element, lib) {
     if (firstView) {
       lookFrom(firstView, { animate: false });
       firstView = null;
+    } else if (activeView && !tween) {
+      // A preset fits the drawing to the stage, so it is fitted again when the stage changes shape.
+      lookFrom(activeView, { animate: false });
     }
     requestRender();
   }
