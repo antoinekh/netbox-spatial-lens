@@ -2,38 +2,57 @@
 
 ## Unreleased
 
-- **Docs:** the README shows a 15 second showreel video below the introduction.
-- **World map:** the racks and the devices of the sites are counted in one query each. Counted together, the database joined every rack of a site with every device of it, so a site of 500 racks and 20,000 devices cost ten million rows.
-- **Floor Devices view:** the server answers faster on a large floor. The tags of all the devices are read in one query, and each device type and role is read once instead of once per device: about 1 s before and 350 ms after on a hall of 80 racks and 2,200 devices.
-- **Rack view:** the cable queries of a rack no longer join the cable table to sort their rows.
-- **Floor plans:** the cable run queries no longer join and sort on the cable table, which the totals do not need, and the racks not yet placed are counted by the database instead of read in full.
-- **Fixed:** the world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
-- **Fixed:** in the layout editor, a second Save after a failure sends only the changes that failed. It sent every change again, so a rack placed by the first Save was refused by the second, and the editor could not finish the save.
-- **Fixed:** the rack view draws a cable between a mounted device and a device of the same rack that has no U position. The cable was dropped when its A end was on the device with no position.
-- **Fixed:** the power figure of a rack on the floor agrees with NetBox in three more cases: a PDU inlet that declares its own draw, a PDU fed by another PDU, and a PDU with a second inlet that no feed of the rack supplies. The floor and the rack view now use the same calculation.
-- **Fixed:** with Cable runs on, a cable to something of the same site that stands in no rack (a power feed, a wall-mounted device) is drawn as "Off the plan". It was drawn and counted as "To another site", under the name of its own site.
-- **Fixed:** the world map does not draw a provider network the reader may not view, nor the circuits that end on it.
-- **Fixed:** a floor needs a width and a depth above zero, and a background layer a width and a height above zero. A zero or negative size was accepted and gave a plan that could not be drawn. Run `manage.py migrate` after the upgrade.
-- **Fixed:** in the rack view, a cable between two ports of one device is listed once under that device, not twice.
-- **Fixed:** on the 2D plan and in the layout editor, the name of a rack turned to face down the plan is upright. It was drawn upside down.
+## v0.5.0 (2026-11-16)
+
+### Upgrade notes
+
+- Run `manage.py migrate` after the upgrade: migration `0004` adds the minimum size of a floor and of a background layer.
+- A link saved with a picked legend band opens with nothing picked. Bands are now named in the link, not given as a colour.
+- For a colouring registered by another plugin with fixed bands, the key of a band is its label as a slug (`90-and-over`). The colours still place a value in its band, so no change is needed in the colouring.
+
+### Added
+
 - **Import:** floors, rack placements and background layers can be imported from CSV, YAML or JSON with the Import button of each list. A row names its site, then the floor and the rack by name. The button was shown before, with no page behind it.
-- **Fixed:** on the 2D plan, a cable run recedes with its racks when a legend band, the find box or a finder narrows the room, as it does in 3D. The runs stayed at full strength over the dimmed racks.
+- **Layout editor:** Undo and Redo (buttons, Ctrl + Z and Ctrl + Shift + Z) for every move, rotation, placement and removal until Save. The toolbar shows the position and the rotation of the selected rack. The arrow keys move the selected rack by one grid step, or by one centimetre with Shift.
+
+### Changed
+
 - **3D drawings:** the stage is as tall as the window leaves, so the whole room or rack is on the first screen, and a camera preset is fitted again when the window changes size. The world map and the 2D plan follow the same rule.
 - **Floor in 3D:** rack names no longer overlap. A name gives way to a nearer one and comes back when you zoom in, turn the room or hover its rack.
 - **Toolbars:** only the colouring keeps the primary colour. The 3D and 2D switch, Cable runs, the camera presets and the display controls are neutral buttons, and the Names button says its name.
 - **Figures and site page:** the figures above a drawing stand on the card itself instead of each in a grey tile, with a dot in the colour of their band. On the site page each room is a NetBox card, no longer a box inside a card, and the racks on no floor have a card of their own.
 - **Floor plans:** a floor opened with no colouring named uses the first colouring that has data when the default one has none, and the legend says which one had no data. A floor with no feed recorded opened all grey on Power. A colouring named in the URL is kept as it is.
 - **Floor plans:** the rack table has the look of a NetBox list and scrolls in its own area with its headings held at the top, and the legend column stays in view while the page scrolls.
-- **Changed:** a legend band picked in a shared link is named, not given as a colour: `#band-racks=90-and-over`, a provider's name for a circuit band and the kind for a cable band. A link saved before this change loses its band and opens with nothing picked.
-- **Fixed:** the world map opens with every site clear of the legends panel, and a picked band is counted against the sites ("Europe: 4 of 29 sites"), the figure above the map.
-- **Fixed:** the open Sites or Circuits button keeps a readable text colour, a link pasted into a tab that already shows the page is applied, and the cable finder of a rack also finds a cable by its kind, such as "power".
+- A legend band picked in a shared link is named, not given as a colour: `#band-racks=90-and-over`, a provider's name for a circuit band and the kind for a cable band. A link saved before this change loses its band and opens with nothing picked.
 - **Legends:** the "No data" row is listed only when something falls in it. The map legends are named "Sites by group" and "Circuits by provider". In the rack view, a legend band picked over the device images switches the rack to Colour.
 - **Legends:** a picked band no longer has a blue bar on its left edge; the darker row and the bold text mark it.
 - **Filtered state:** what a legend band, the find box or a finder leaves out is dimmed less (35 % on the plans and the map, 30 % for cabinets in 3D), so the room keeps its shape. A finder lists only the rows the legend leaves in and says how many. The world map moves to the sites of the picked bands, and back to the estate when the band is cleared.
 - **Cable runs:** with Cable runs on, the runs between racks rest faint and the runs of the rack under the pointer are drawn in full, on the 2D plan and in 3D. The hover card of a rack says what it is cabled to, for example "12 cables to 2 racks, 3 off the floor".
-- **Layout editor:** Undo and Redo (buttons, Ctrl + Z and Ctrl + Shift + Z) for every move, rotation, placement and removal until Save. The toolbar shows the position and the rotation of the selected rack. The arrow keys move the selected rack by one grid step, or by one centimetre with Shift.
 - **Pages:** the world map has a page title. On the floor page and in the layout editor, the way up ("World map / site") is in the NetBox breadcrumb above the title, and no longer in a second strip inside the card. The site and rack tabs keep the strip, because their breadcrumb belongs to NetBox.
-- **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
+- **Docs:** the README shows a 15 second showreel video below the introduction.
+
+### Performance
+
+- **World map:** the racks and the devices of the sites are counted in one query each. Counted together, the database joined every rack of a site with every device of it, so a site of 500 racks and 20,000 devices cost ten million rows.
+- **Floor Devices view:** the server answers faster on a large floor. The tags of all the devices are read in one query, and each device type and role is read once instead of once per device: about 1 s before and 350 ms after on a hall of 80 racks and 2,200 devices.
+- **Rack view:** the cable queries of a rack no longer join the cable table to sort their rows.
+- **Floor plans:** the cable run queries no longer join and sort on the cable table, which the totals do not need, and the racks not yet placed are counted by the database instead of read in full.
+
+### Fixed
+
+- The floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
+- The world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
+- In the layout editor, a second Save after a failure sends only the changes that failed. It sent every change again, so a rack placed by the first Save was refused by the second, and the editor could not finish the save.
+- The rack view draws a cable between a mounted device and a device of the same rack that has no U position. The cable was dropped when its A end was on the device with no position.
+- The power figure of a rack on the floor agrees with NetBox in three more cases: a PDU inlet that declares its own draw, a PDU fed by another PDU, and a PDU with a second inlet that no feed of the rack supplies. The floor and the rack view now use the same calculation.
+- With Cable runs on, a cable to something of the same site that stands in no rack (a power feed, a wall-mounted device) is drawn as "Off the plan". It was drawn and counted as "To another site", under the name of its own site.
+- The world map does not draw a provider network the reader may not view, nor the circuits that end on it.
+- A floor needs a width and a depth above zero, and a background layer a width and a height above zero. A zero or negative size was accepted and gave a plan that could not be drawn. Run `manage.py migrate` after the upgrade.
+- In the rack view, a cable between two ports of one device is listed once under that device, not twice.
+- On the 2D plan and in the layout editor, the name of a rack turned to face down the plan is upright. It was drawn upside down.
+- On the 2D plan, a cable run recedes with its racks when a legend band, the find box or a finder narrows the room, as it does in 3D. The runs stayed at full strength over the dimmed racks.
+- The world map opens with every site clear of the legends panel, and a picked band is counted against the sites ("Europe: 4 of 29 sites"), the figure above the map.
+- The open Sites or Circuits button keeps a readable text colour, a link pasted into a tab that already shows the page is applied, and the cable finder of a rack also finds a cable by its kind, such as "power".
 
 ## v0.4.0 (2026-09-22)
 
