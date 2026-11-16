@@ -30,6 +30,7 @@
 - **Cable runs:** with Cable runs on, the runs between racks rest faint and the runs of the rack under the pointer are drawn in full, on the 2D plan and in 3D. The hover card of a rack says what it is cabled to, for example "12 cables to 2 racks, 3 off the floor".
 - **Pages:** the world map has a page title. On the floor page and in the layout editor, the way up ("World map / site") is in the NetBox breadcrumb above the title, and no longer in a second strip inside the card. The site and rack tabs keep the strip, because their breadcrumb belongs to NetBox.
 - **Docs:** the README shows a 15 second showreel video below the introduction.
+- **Docs:** the six captures of the README are retaken on this version.
 - **Docs:** the README no longer carries the "Not stable yet" warning, and the section "Where the ideas come from" is collapsed until opened.
 
 ### Performance
@@ -41,6 +42,7 @@
 
 ### Fixed
 
+- In the 3D drawings, the rack names no longer draw over the hover card and the stage controls.
 - The floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 - The world map counts only the racks and the devices the reader may view. The site markers, the hover cards and the figures above the map counted every rack and device of a site.
 - In the layout editor, a second Save after a failure sends only the changes that failed. It sent every change again, so a rack placed by the first Save was refused by the second, and the editor could not finish the save.

@@ -490,6 +490,9 @@
 .lens-3d__labels {
   position: absolute;
   inset: 0;
+  /* A layer of its own: the label renderer orders the names among themselves with large
+     z-index values, which without this put them over the hover card and the controls. */
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -1089,7 +1092,7 @@
 /* The tile map. Height rather than aspect ratio: a map is a window onto the world, not a
    picture with a fixed shape. */
 .lens-map {
-  height: calc(100vh - 17rem);
+  height: calc(100vh - 19.5rem);
   min-height: 22rem;
   border-radius: .375rem;
   z-index: 0;
@@ -1489,6 +1492,12 @@
 
 .lens-room-card {
   margin: 0;
+}
+
+/* Four figures in two rows of two: a room card is too narrow for four across, and three with
+   one left over reads as a mistake. */
+.lens-room-card .lens-stats {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 /* The thumbnail overrides the full-page plan height. Everything else about the drawing is
