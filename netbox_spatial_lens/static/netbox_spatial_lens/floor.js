@@ -205,16 +205,27 @@
     hover.style.top = `${top}px`;
   }
 
+  /* Light the cabling of one rack, or of none: its runs to other racks and its exits. */
+  function lightCabling(rack) {
+    const id = rack ? rack.dataset.rackId : null;
+    cabling.forEach(function (line) {
+      const ends = [line.dataset.rackA, line.dataset.rackB, line.dataset.rackId];
+      line.classList.toggle('is-lit', id !== null && ends.includes(id));
+    });
+  }
+
   function show(rack) {
     hover.innerHTML = cardFor(rack);
     hover.hidden = false;
     // Placed after the content is in, so the measurement is of the card that will be shown
     // rather than of the one before it.
     place(rack);
+    lightCabling(rack);
   }
 
   function hide() {
     hover.hidden = true;
+    lightCabling(null);
   }
 
   /* The rack an event is about. Keyboard focus lands on the link around the rack rather than on

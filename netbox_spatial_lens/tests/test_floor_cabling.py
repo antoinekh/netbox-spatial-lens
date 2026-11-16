@@ -5,7 +5,7 @@ The subject is the aggregation, not the drawing: one line per pair of racks, cou
 cables that actually leave a cabinet and ignoring the ones that never do.
 """
 
-from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs, count_cables
+from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs, cabling_facts, count_cables
 from netbox_spatial_lens.layout import build_layout
 from netbox_spatial_lens.tests.base import LensTestCase, cable, make_device, make_floor, make_rack, place
 
@@ -71,6 +71,14 @@ class FloorRunTest(LensTestCase):
         runs = build_floor_runs(self.placed())
         self.assertEqual([run.count for run in runs], [1, 4])
         self.assertGreater(runs[1].width, runs[0].width)
+
+    def test_a_rack_says_what_it_is_cabled_to(self):
+        self.link(self.a1, self.b1)
+        self.link(self.a1, self.b1, index=1)
+        self.link(self.a2, self.c1)
+        facts = cabling_facts(build_floor_runs(self.placed()), [])
+        self.assertEqual(facts[self.rack_a.pk], '3 cables to 2 racks')
+        self.assertEqual(facts[self.rack_c.pk], '1 cable to 1 rack')
 
     def test_a_rack_nobody_placed_carries_no_run(self):
         unplaced = make_rack(self.site, name='RD')

@@ -35,6 +35,7 @@ __all__ = (
     'FloorRun',
     'build_floor_exits',
     'build_floor_runs',
+    'cabling_facts',
     'cabling_legend',
     'count_cables',
 )
@@ -391,6 +392,35 @@ def _wall_point(rack: PlacedRack, width: float, depth: float, offset: float) -> 
 
 def _clamp(value: float, limit: float) -> float:
     return max(0.0, min(value, limit))
+
+
+def cabling_facts(runs: Iterable[FloorRun], exits: Iterable[FloorExit]) -> dict[int, str]:
+    """
+    What each rack is cabled to, in a line for its hover card, keyed by rack id.
+
+    The runs of one rack are lit when it is under the pointer, and a line cannot be counted by
+    eye: this says how many cables they are and how many racks they reach.
+    """
+    cables: dict[int, int] = {}
+    peers: dict[int, int] = {}
+    for run in runs:
+        for rack in (run.a.rack, run.b.rack):
+            cables[rack.pk] = cables.get(rack.pk, 0) + run.count
+            peers[rack.pk] = peers.get(rack.pk, 0) + 1
+    leaving: dict[int, int] = {}
+    for item in exits:
+        leaving[item.rack.rack.pk] = leaving.get(item.rack.rack.pk, 0) + item.count
+
+    facts = {}
+    for rack_id in cables.keys() | leaving.keys():
+        parts = []
+        if rack_id in cables:
+            count, racks = cables[rack_id], peers[rack_id]
+            parts.append(f'{count} cable{"" if count == 1 else "s"} to {racks} rack{"" if racks == 1 else "s"}')
+        if rack_id in leaving:
+            parts.append(f'{leaving[rack_id]} off the floor')
+        facts[rack_id] = ', '.join(parts)
+    return facts
 
 
 def cabling_legend(runs: Iterable[FloorRun], exits: Iterable[FloorExit]) -> list[LegendEntry]:

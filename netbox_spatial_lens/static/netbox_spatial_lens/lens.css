@@ -839,12 +839,15 @@
    corner, and translucent so crossing runs stay countable. */
 .lens-floor-run {
   stroke: var(--lens-kind-interface, #4c8dbf);
-  stroke-opacity: .45;
+  /* Faint until asked for: every run of a hall at once is a mesh over the racks, so the runs
+     rest as a trace of where the cabling is dense and one rack's runs are lit at a time. */
+  stroke-opacity: .15;
   stroke-linecap: round;
   shape-rendering: geometricPrecision;
 }
 
-.lens-floor-run:hover {
+.lens-floor-run:hover,
+.lens-floor-run.is-lit {
   stroke-opacity: .95;
 }
 
@@ -870,7 +873,9 @@
 }
 
 .lens-floor-exit:hover line,
-.lens-floor-exit:hover circle {
+.lens-floor-exit:hover circle,
+.lens-floor-exit.is-lit line,
+.lens-floor-exit.is-lit circle {
   stroke-opacity: 1;
   fill-opacity: 1;
 }

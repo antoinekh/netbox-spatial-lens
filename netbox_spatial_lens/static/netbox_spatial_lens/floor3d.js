@@ -23,6 +23,8 @@ const configNode = document.getElementById('lens-floor3d-config');
 
 // Opacity of a rack left out by a filter.
 const FILTERED_OPACITY = 0.3;
+// A run nobody is asking about: enough to show where the cabling is dense, not a mesh over the room.
+const RESTING_RUN_OPACITY = 0.15;
 // How far a door stands off its cabinet, in millimetres: far enough to stay in front of it at
 // room scale.
 const DOOR_OFFSET = 6;
@@ -383,6 +385,8 @@ function build(stage, config) {
       view.meshes.concat(view.pickables).forEach((mesh) => (mesh.visible = kept));
       const lit = hovered === view || view.rackIds.includes(hoveredRackId);
       view.material.emissiveIntensity = lit ? 0.45 : 0;
+      // A run between two racks rests faint and is drawn in full for the rack under the pointer.
+      if (view.run) stage.setOpacity(view.material, lit ? 1 : RESTING_RUN_OPACITY);
       if (view.name) view.name.visible = kept && lit;
     });
 

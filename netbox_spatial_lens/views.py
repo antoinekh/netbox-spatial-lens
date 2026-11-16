@@ -25,7 +25,7 @@ from netbox_spatial_lens.cabling import kind_legend
 from netbox_spatial_lens.device_overlays import get_device_overlays, resolve_device_overlay
 from netbox_spatial_lens.elevation import build_elevation, rack_summary
 from netbox_spatial_lens.field_filters import cells_for, field_filters
-from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs, cabling_legend
+from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs, cabling_facts, cabling_legend
 from netbox_spatial_lens.floor_scene import build_floor_scene
 from netbox_spatial_lens.geometry import floor_viewport, metre_ticks, rack_footprint_cm
 from netbox_spatial_lens.layout import (
@@ -157,6 +157,10 @@ class FloorView(generic.ObjectView):
         # Drawn under the same toggle: a room whose only cabling leaves the building would
         # otherwise answer "show me the cabling" with an empty plan.
         exits = build_floor_exits(placed, instance, user=request.user) if show_runs else []
+        cabled = cabling_facts(runs, exits)
+        for p in placed:
+            if p.rack.pk in cabled:
+                p.facts.append(('Cabling', cabled[p.rack.pk]))
         stage = three_stage()
         return {
             'three_imports': stage.imports,
