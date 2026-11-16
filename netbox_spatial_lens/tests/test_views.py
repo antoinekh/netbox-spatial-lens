@@ -21,6 +21,7 @@ from netbox_spatial_lens.palette import NO_DATA, categorical_colour, distinct_co
 from netbox_spatial_lens.site_overlays import SiteOverlay, get_site_overlay, get_site_overlays
 from netbox_spatial_lens.tests.base import (
     LensTestCase,
+    cable,
     make_device,
     make_floor,
     make_rack,
@@ -231,6 +232,15 @@ class RackCablingFinderTest(ViewTestCase):
         # Selecting a device narrows the card to that device, which is a short list and stays.
         response = self._get()
         self.assertContains(response, f'data-lens-cabling="{self.switch.pk}"')
+
+    def test_a_cable_between_two_ports_of_one_device_is_listed_once_under_it(self):
+        rack = make_rack(self.site, name='Loop')
+        device = make_device(self.site, rack, 'looped', self.role, self.manufacturer, interfaces=2)
+        first, second = device.interfaces.all()
+        cable(first, second)
+        response = self.client.get(reverse('dcim:rack_lens', args=[rack.pk]))
+        runs = {mounted.device.pk: listed for mounted, listed in response.context['runs_by_device']}
+        self.assertEqual(len(runs[device.pk]), 1)
 
     def test_a_rack_with_no_cabling_offers_no_finder(self):
         bare = make_rack(self.site, name='R2', u_height=10)

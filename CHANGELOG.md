@@ -14,6 +14,7 @@
 - **Fixed:** with Cable runs on, a cable to something of the same site that stands in no rack (a power feed, a wall-mounted device) is drawn as "Off the plan". It was drawn and counted as "To another site", under the name of its own site.
 - **Fixed:** the world map does not draw a provider network the reader may not view, nor the circuits that end on it.
 - **Fixed:** a floor needs a width and a depth above zero, and a background layer a width and a height above zero. A zero or negative size was accepted and gave a plan that could not be drawn. Run `manage.py migrate` after the upgrade.
+- **Fixed:** in the rack view, a cable between two ports of one device is listed once under that device, not twice.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

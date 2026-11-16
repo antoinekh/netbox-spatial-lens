@@ -353,7 +353,7 @@ class RackLensView(generic.ObjectView):
         runs_by_device = {}
         for run in elevation.runs:
             runs_by_device.setdefault(run.local_device.pk, []).append(run)
-            if run.peer_device is not None:
+            if run.peer_device is not None and run.peer_device.pk != run.local_device.pk:
                 runs_by_device.setdefault(run.peer_device.pk, []).append(run)
 
         stage = three_stage()
