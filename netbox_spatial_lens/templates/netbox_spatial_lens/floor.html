@@ -14,6 +14,19 @@
   {% lens_import_map three_imports %}
 {% endblock %}
 
+{% comment %}
+The way up, where NetBox puts it: the map, then the site this floor is in. The floor is the
+page's title, so it is not said again here.
+{% endcomment %}
+{% block breadcrumbs %}
+  <li class="breadcrumb-item"><a href="{% url 'plugins:netbox_spatial_lens:world' %}">World map</a></li>
+  {% with site=object.effective_site %}
+    {% if site %}
+      <li class="breadcrumb-item"><a href="{% url 'dcim:site_lens' pk=site.pk %}">{{ site.name }}</a></li>
+    {% endif %}
+  {% endwith %}
+{% endblock %}
+
 {% block content %}
 <div class="row">
   <div class="col col-md-9">
@@ -21,7 +34,6 @@
       <div class="card-body">
 
         <div class="lens-toolbar">
-          {% include 'netbox_spatial_lens/inc/levels.html' with site=object.effective_site floor=object %}
           {% if placed_racks %}
             <div class="btn-group btn-group-sm" role="group" aria-label="Show the floor">
               <button type="button" class="btn btn-outline-secondary active" data-lens-floor-view="3d" aria-pressed="true">3D</button>
