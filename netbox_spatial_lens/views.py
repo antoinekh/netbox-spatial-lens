@@ -37,7 +37,7 @@ from netbox_spatial_lens.layout import (
     resolve_overlay,
     unplaced_racks,
 )
-from netbox_spatial_lens.models import Floor, FloorLayer, RackPlacement
+from netbox_spatial_lens.models import CM_PER_UNIT, Floor, FloorLayer, RackPlacement
 from netbox_spatial_lens.overlays import get_overlay, get_overlays
 from netbox_spatial_lens.palette import (
     HIGHLIGHT,
@@ -211,6 +211,7 @@ class FloorLayoutView(generic.ObjectView):
         step = int(view.step / 100)
         racks = Rack.objects.restrict(request.user, 'view')
         devices = Device.objects.restrict(request.user, 'view')
+        can_change_layers = request.user.has_perm('netbox_spatial_lens.change_floorlayer')
         return {
             'placed_racks': build_layout(instance, None, racks=racks, devices=devices),
             # What the editor may do besides moving a rack. The tab needs change; placing a rack
@@ -222,7 +223,12 @@ class FloorLayoutView(generic.ObjectView):
             # rather than at a default one that changes on the next reload.
             'unplaced_racks': [(rack, *rack_footprint_cm(rack)) for rack in unplaced_racks(instance, racks=racks)],
             'grid_size': get_plugin_config('netbox_spatial_lens', 'grid_size'),
-            'layers': instance.layers.filter(enabled=True),
+            # Every layer, shown or not, when the reader may change them: one switched off is
+            # still one to switch on.
+            'layers': instance.layers.all() if can_change_layers else instance.layers.filter(enabled=True),
+            'can_change_layers': can_change_layers,
+            'can_add_layers': request.user.has_perm('netbox_spatial_lens.add_floorlayer'),
+            'unit_cm': CM_PER_UNIT[instance.unit],
             'view': view,
             'x_ticks': metre_ticks(instance.width_cm, step),
             'y_ticks': metre_ticks(instance.depth_cm, step),
@@ -607,6 +613,13 @@ class FloorLayerListView(generic.ObjectListView):
 class FloorLayerEditView(generic.ObjectEditView):
     queryset = FloorLayer.objects.all()
     form = forms.FloorLayerForm
+    template_name = 'netbox_spatial_lens/floorlayer_edit.html'
+
+    def get_extra_context(self, request, instance):
+        base = get_plugin_config('netbox_spatial_lens', 'pdfjs_base') or ''
+        if base and not base.endswith('/'):
+            base = f'{base}/'
+        return {'upload_config': {'pdfjsBase': base}}
 
 
 @register_model_view(FloorLayer, 'delete')

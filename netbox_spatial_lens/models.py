@@ -305,10 +305,10 @@ class FloorLayer(NetBoxModel):
     Several layers can stack. `weight` orders them and `opacity` decides how much of each
     shows, which is how a floor plan is put under a photograph, or a rack grid over both.
 
-    Raster images only: PNG, JPEG, WebP or GIF, see `validate_layer_image`. NetBox Labs' Visual
-    Explorer accepts a PDF and rasterises it; doing that here would mean a rendering dependency
-    in a plugin whose whole shape is "no build step, no extra services", so a PDF or an SVG is
-    exported to PNG before it is uploaded, or linked from another host with `external_url`.
+    Raster images only: PNG, JPEG, WebP or GIF, see `validate_layer_image`. Rasterising a PDF
+    on the server would mean a rendering dependency in a plugin whose whole shape is "no build
+    step, no extra services", so the layer form converts a PDF to PNG in the browser, and the
+    API and the import take an image or an `external_url`.
     """
 
     floor = models.ForeignKey(

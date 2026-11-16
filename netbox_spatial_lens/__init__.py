@@ -68,6 +68,11 @@ class SpatialLensConfig(PluginConfig):
         # the core. Empty turns both drawings off: the rack page keeps its panels and figures, and
         # the floor opens on its 2D plan.
         'three_base': 'https://cdn.jsdelivr.net/npm/three@0.186.0/',
+        # Where the background layer form loads pdf.js from, to turn a chosen PDF into a PNG in the
+        # browser: a copy of the `pdfjs-dist` npm package, with `build/pdf.min.mjs` and
+        # `build/pdf.worker.min.mjs` under it. Empty turns the conversion off, and the form then
+        # takes images only.
+        'pdfjs_base': 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/',
     }
 
     def ready(self) -> None:

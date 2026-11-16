@@ -96,7 +96,9 @@
     svg.addEventListener('pointerdown', function (event) {
       if (event.button !== 0 || !svg.classList.contains('is-zoomed')) return;
       // The editor drags racks itself.
-      if (svg.classList.contains('lens-floor--editing') && event.target.closest('.lens-rack')) return;
+      if (svg.classList.contains('lens-floor--editing') && event.target.closest('.lens-rack, .lens-calibration')) return;
+      // A layer being calibrated is dragged, wherever on it the press lands.
+      if (svg.classList.contains('lens-floor--calibrating') && event.target.closest('.lens-layers image')) return;
       drag = {
         id: event.pointerId,
         startX: event.clientX,

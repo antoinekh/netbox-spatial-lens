@@ -10,6 +10,7 @@ PDU exercises the elevation, the cabling and the power chain; anything larger on
 failure harder to read.
 """
 
+from core.models import ObjectType
 from dcim.models import (
     Cable,
     Device,
@@ -31,6 +32,7 @@ from netbox_spatial_lens.models import Floor, RackPlacement
 __all__ = (
     'LensTestCase',
     'cable',
+    'grant',
     'make_device',
     'make_floor',
     'make_rack',
@@ -141,3 +143,20 @@ def power_feed(rack, name='feed', amperage=16, voltage=230, max_utilization=80):
         max_utilization=max_utilization,
         status='active',
     )
+
+
+def grant(user, model: str, actions=('view',), constraints=None) -> None:
+    """
+    One NetBox object permission, for a test that reads as a permission question.
+
+    `model` is 'app_label.model'. `constraints` are NetBox's own object-level constraints, so
+    a test can grant a user one rack of two and assert the other is nowhere on the page.
+    """
+    from users.models import ObjectPermission
+
+    app, name = model.split('.')
+    permission = ObjectPermission.objects.create(
+        name=f'{model} {"-".join(actions)}', actions=list(actions), constraints=constraints or None
+    )
+    permission.users.add(user)
+    permission.object_types.add(ObjectType.objects.get(app_label=app, model=name))

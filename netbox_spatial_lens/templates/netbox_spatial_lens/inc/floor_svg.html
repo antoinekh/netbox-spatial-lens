@@ -66,6 +66,12 @@ re-parses the page.
                width="{{ layer.width|num }}" height="{{ layer.height|num }}"
                opacity="{{ layer.opacity|num:2 }}"
                preserveAspectRatio="none"
+               data-layer-id="{{ layer.pk }}" data-name="{{ layer.name }}"
+               data-x="{{ layer.x|num }}" data-y="{{ layer.y|num }}"
+               data-width="{{ layer.width|num }}" data-height="{{ layer.height|num }}"
+               data-rotation="{{ layer.rotation|num }}" data-opacity="{{ layer.opacity|num:2 }}"
+               data-weight="{{ layer.weight }}" data-enabled="{{ layer.enabled|yesno:'true,false' }}"
+               {% if not layer.enabled %}display="none"{% endif %}
                {% if layer.rotation %}transform="rotate({{ layer.rotation|num }} {{ layer.centre_x|num }} {{ layer.centre_y|num }})"{% endif %}>
           <title>{{ layer.name }}</title>
         </image>

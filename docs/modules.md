@@ -30,6 +30,8 @@ What each part of the plugin holds. The Python modules are under `netbox_spatial
 | `rack_panel.js` | The column beside the rack: port allocation, cabling, reservations and the traced path |
 | `world.js` | The MapLibre globe, and the message shown when it cannot be drawn |
 | `editor.js` | Dragging and saving a placement |
+| `layers.js` | The background layers in the editor: show, order, fade and calibrate them |
+| `layer_upload.js` | A PDF chosen on the layer form, converted to PNG with pdf.js before it is sent |
 | `lens.css` | The styles of every page, drawn from the palette's CSS variables |
 
 To add a colouring from another plugin, filter by custom fields, or read a floor through the REST API, see [extending.md](extending.md).

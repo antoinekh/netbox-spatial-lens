@@ -242,6 +242,12 @@ class RackPlacementBulkEditForm(NetBoxModelBulkEditForm):
 class FloorLayerForm(NetBoxModelForm):
     floor = DynamicModelChoiceField(queryset=Floor.objects.all())
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # This form converts a PDF in the browser, which the model's own help text cannot promise:
+        # the API and the import take images only.
+        self.fields['file'].help_text = 'PNG, JPEG, WebP or GIF. The first page of a PDF is converted to PNG here.'
+
     fieldsets = (
         FieldSet('floor', 'name', 'file', 'external_url', name='Image'),
         FieldSet('x', 'y', 'width', 'height', 'rotation', name='Where it sits, in room centimetres'),

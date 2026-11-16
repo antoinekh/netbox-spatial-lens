@@ -6,11 +6,12 @@ the enabled ones, in order, beneath everything else.
 """
 
 from django.core.exceptions import ValidationError
+from django.test import override_settings
 from django.urls import reverse
 from utilities.testing import create_test_user
 
 from netbox_spatial_lens.models import FloorLayer
-from netbox_spatial_lens.tests.base import LensTestCase, make_floor, make_rack, place
+from netbox_spatial_lens.tests.base import LensTestCase, grant, make_floor, make_rack, place
 
 
 class FloorLayerTest(LensTestCase):
@@ -106,6 +107,52 @@ class FloorLayerViewTest(LensTestCase):
             enabled=False,
         )
         self.assertNotIn('https://example.invalid/old.png', self.floor_page().content.decode())
+
+    def editor_page(self):
+        return self.client.get(reverse('plugins:netbox_spatial_lens:floor_layout', args=[self.floor.pk]))
+
+    def test_the_editor_lists_a_disabled_layer_so_it_can_be_switched_on(self):
+        layer = FloorLayer.objects.create(
+            floor=self.floor,
+            name='Old plan',
+            external_url='https://example.invalid/old.png',
+            width=100,
+            height=100,
+            enabled=False,
+        )
+        response = self.editor_page()
+        self.assertContains(response, f'data-lens-layer="{layer.pk}"')
+        self.assertContains(response, 'data-enabled="false"')
+        self.assertContains(response, reverse('plugins-api:netbox_spatial_lens-api:floorlayer-detail', args=[layer.pk]))
+
+    def test_the_editor_offers_no_layer_tools_without_the_permission_to_change_one(self):
+        FloorLayer.objects.create(
+            floor=self.floor,
+            name='Old plan',
+            external_url='https://example.invalid/old.png',
+            width=100,
+            height=100,
+            enabled=False,
+        )
+        self.user.is_superuser = False
+        self.user.save()
+        grant(self.user, 'netbox_spatial_lens.floor')
+        grant(self.user, 'netbox_spatial_lens.floorlayer')
+        grant(self.user, 'netbox_spatial_lens.rackplacement', actions=('view', 'change'))
+        response = self.editor_page()
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-lens-layers')
+        self.assertNotContains(response, 'https://example.invalid/old.png')
+
+    def test_the_layer_form_is_told_where_pdfjs_is(self):
+        response = self.client.get(reverse('plugins:netbox_spatial_lens:floorlayer_add'))
+        self.assertContains(response, 'layer_upload.js')
+        self.assertContains(response, 'pdfjs-dist')
+
+    @override_settings(PLUGINS_CONFIG={'netbox_spatial_lens': {'pdfjs_base': ''}})
+    def test_the_layer_form_converts_nothing_when_pdfjs_is_turned_off(self):
+        response = self.client.get(reverse('plugins:netbox_spatial_lens:floorlayer_add'))
+        self.assertContains(response, '"pdfjsBase": ""')
 
     def test_cable_runs_are_off_until_they_are_asked_for(self):
         self.assertNotIn('lens-floor-runs', self.floor_page().content.decode())

@@ -48,7 +48,7 @@ page's title, so it is not said again here.
           <span class="lens-editor-position text-muted" data-lens-position></span>
           <span class="lens-toolbar__spacer"></span>
           <span class="lens-editor-status text-muted" data-lens-status></span>
-          {% include 'netbox_spatial_lens/inc/help.html' with text='Drag a rack to move it. Click a rack to select it, then rotate or remove it, or move it with the arrow keys: one grid step, or one centimetre with Shift. Pick a rack under Not yet placed, then click the floor to put it down. Ctrl + Z undoes and Ctrl + Shift + Z redoes, until Save. Ctrl + wheel zooms; drag the floor to move it when zoomed. Nothing is written until Save.' %}
+          {% include 'netbox_spatial_lens/inc/help.html' with text='Drag a rack to move it. Click a rack to select it, then rotate or remove it, or move it with the arrow keys: one grid step, or one centimetre with Shift. Pick a rack under Not yet placed, then click the floor to put it down. Ctrl + Z undoes and Ctrl + Shift + Z redoes, until Save. Ctrl + wheel zooms; drag the floor to move it when zoomed. To put a background layer to scale, choose Calibrate: drag the layer, pull a corner, or use Set scale. Nothing is written until Save.' %}
           <button type="button" class="btn btn-sm btn-primary" data-lens-save disabled>
             <i class="mdi mdi-content-save"></i> Save
           </button>
@@ -78,6 +78,69 @@ page's title, so it is not said again here.
         {% endfor %}
       </div>
     </div>
+
+    {% if can_change_layers %}
+      {% comment %}
+      Every layer of the floor, shown or not: a layer switched off is still one to switch on.
+      {% endcomment %}
+      <div class="card" data-lens-layers data-unit-cm="{{ unit_cm|num }}" data-unit="{{ object.get_unit_display|lower }}">
+        <h2 class="card-header">Background layers</h2>
+        <div class="card-body">
+          <div data-lens-layer-list>
+            {% for layer in layers %}
+              <div class="lens-layer" data-lens-layer="{{ layer.pk }}"
+                   data-url="{% url 'plugins-api:netbox_spatial_lens-api:floorlayer-detail' pk=layer.pk %}">
+                <div class="lens-layer__head">
+                  <input type="checkbox" class="form-check-input m-0" data-lens-layer-enabled
+                         {% if layer.enabled %}checked{% endif %} aria-label="Show {{ layer.name }}">
+                  <span class="lens-layer__name">{{ layer.name }}</span>
+                  <div class="btn-group btn-group-sm" role="group" aria-label="Order of {{ layer.name }}">
+                    <button type="button" class="btn btn-outline-secondary" data-lens-layer-up title="Draw earlier, under the others" aria-label="Draw earlier">
+                      <i class="mdi mdi-arrow-up" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-lens-layer-down title="Draw later, over the others" aria-label="Draw later">
+                      <i class="mdi mdi-arrow-down" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" data-lens-layer-calibrate aria-pressed="false">Calibrate</button>
+                </div>
+                <div class="lens-layer__tools" data-lens-layer-tools hidden>
+                  <label>
+                    <span>Opacity</span>
+                    <input type="range" class="form-range" min="0" max="1" step="0.05" data-lens-layer-opacity value="{{ layer.opacity|num:2 }}">
+                  </label>
+                  <label>
+                    <span>Rotation</span>
+                    <input type="number" class="form-control form-control-sm" min="0" max="359.9" step="0.1" data-lens-layer-rotation value="{{ layer.rotation|num }}">
+                  </label>
+                  <div class="lens-layer__actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-lens-layer-scale>
+                      <i class="mdi mdi-ruler" aria-hidden="true"></i> Set scale
+                    </button>
+                    <a href="{% url 'plugins:netbox_spatial_lens:floorlayer_edit' pk=layer.pk %}?return_url={{ request.path|urlencode }}">Edit</a>
+                  </div>
+                  <form class="lens-layer__scale" data-lens-layer-scale-form hidden>
+                    <label>
+                      <span>Distance between the two points, in {{ object.get_unit_display|lower }}</span>
+                      <input type="number" class="form-control form-control-sm" min="0" step="any" required>
+                    </label>
+                    <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                  </form>
+                </div>
+              </div>
+            {% empty %}
+              <p class="text-muted">This floor has no background layer.</p>
+            {% endfor %}
+          </div>
+          {% if can_add_layers %}
+            <a class="btn btn-sm btn-outline-secondary mt-2"
+               href="{% url 'plugins:netbox_spatial_lens:floorlayer_add' %}?floor={{ object.pk }}&amp;width={{ object.width_cm|num }}&amp;height={{ object.depth_cm|num }}&amp;return_url={{ request.path|urlencode }}%23calibrate%3Dlatest">
+              <i class="mdi mdi-plus" aria-hidden="true"></i> Add a layer
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 </div>
 
@@ -102,4 +165,5 @@ every write would come back 403. This renders the readable copy it reads instead
 </script>
 <script src="{% lens_static 'netbox_spatial_lens/zoom.js' %}" defer></script>
 <script src="{% lens_static 'netbox_spatial_lens/editor.js' %}" defer></script>
+<script src="{% lens_static 'netbox_spatial_lens/layers.js' %}" defer></script>
 {% endblock %}

@@ -19,6 +19,7 @@ Every setting is optional. Set them under `PLUGINS_CONFIG['netbox_spatial_lens']
 | `map_js` | MapLibre 5.6.1 on cdnjs | Where the browser loads MapLibre from. Empty turns the world map off. |
 | `map_css` | MapLibre 5.6.1 on cdnjs | Where the browser loads MapLibre's stylesheet from. |
 | `map_glyphs` | OpenMapTiles fonts | Font server for the site names on the map. `None` draws the map without names. |
+| `pdfjs_base` | pdf.js 4.10.38 on jsDelivr | Where the background layer form loads pdf.js from, to convert a chosen PDF to PNG in the browser: a copy of the `pdfjs-dist` npm package, with `build/pdf.min.mjs` and `build/pdf.worker.min.mjs` under it. Empty turns the conversion off; the form then takes images only. |
 | `three_base` | Three.js 0.186.0 on jsDelivr | Where the browser loads Three.js from for the rack view and the 3D floor: a copy of the `three` npm package, with `build/three.module.js` and `examples/jsm/` under it. Empty turns both 3D drawings off; the floor then opens in 2D. |
 
 A name in a URL that no colouring answers to falls back to the default, and then to the first colouring registered, so an old link still opens.
@@ -41,6 +42,7 @@ PLUGINS_CONFIG = {
         'map_glyphs': None,
         # A copy of the `three` npm package, unpacked as published.
         'three_base': 'https://static.example.internal/three/0.186.0/',
+        'pdfjs_base': 'https://static.example.internal/pdfjs-dist/4.10.38/',
     },
 }
 ```

@@ -1,0 +1,11 @@
+{% extends 'generic/object_edit.html' %}
+{% load lens %}
+
+{% comment %}
+The ordinary edit form, with the script that turns a chosen PDF into a PNG before it is sent.
+{% endcomment %}
+{% block javascript %}
+  {{ block.super }}
+  {{ upload_config|json_script:"lens-layer-upload-config" }}
+  <script src="{% lens_static 'netbox_spatial_lens/layer_upload.js' %}" defer></script>
+{% endblock %}

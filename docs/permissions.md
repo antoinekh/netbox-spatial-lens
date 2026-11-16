@@ -17,7 +17,7 @@ The plugin adds three models. Everything else it draws belongs to NetBox.
 | `netbox_spatial_lens.rackplacement` | A rack, an x, a y and a rotation | `view` to read a plan; `add`, `change` and `delete` to use the editor |
 | `netbox_spatial_lens.floorlayer` | A scanned plan or photograph under the racks | anyone who should see or manage backgrounds |
 
-A reader needs `view` on all three. Someone laying racks out needs `change` on `netbox_spatial_lens.rackplacement`, which is what the **Edit layout** tab checks before it appears. Putting a rack down from the unplaced panel also needs `add`, and taking a saved rack off the floor needs `delete`; the editor does not offer either action to a user who lacks it.
+A reader needs `view` on all three. Someone laying racks out needs `change` on `netbox_spatial_lens.rackplacement`, which is what the **Edit layout** tab checks before it appears. Putting a rack down from the unplaced panel also needs `add`, and taking a saved rack off the floor needs `delete`; the editor does not offer either action to a user who lacks it. The **Background layers** panel of the editor, where a layer is shown, ordered and calibrated, needs `change` on `netbox_spatial_lens.floorlayer`, and its **Add a layer** button needs `add`.
 
 Grant them as you grant any NetBox permission: **Admin → Permissions → Add**, pick the object types, tick the actions, and assign to users or groups. Object-level constraints work the same way, so a permission on `netbox_spatial_lens.floor` constrained to `{"site__group__name": "Branch Offices"}` gives that group's rooms and no others.
 

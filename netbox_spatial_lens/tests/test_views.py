@@ -5,7 +5,6 @@ The pages render, and they tell the truth about what they could not answer.
 import copy
 from unittest import mock
 
-from core.models import ObjectType
 from dcim.models import Site
 from django.conf import settings
 from django.db import connection, transaction
@@ -22,6 +21,7 @@ from netbox_spatial_lens.site_overlays import SiteOverlay, get_site_overlay, get
 from netbox_spatial_lens.tests.base import (
     LensTestCase,
     cable,
+    grant,
     make_device,
     make_floor,
     make_rack,
@@ -29,23 +29,6 @@ from netbox_spatial_lens.tests.base import (
     power_feed,
 )
 from netbox_spatial_lens.world import build_world
-
-
-def grant(user, model: str, actions=('view',), constraints=None) -> None:
-    """
-    One NetBox object permission, for a test that reads as a permission question.
-
-    `model` is 'app_label.model'. `constraints` are NetBox's own object-level constraints, so
-    a test can grant a user one rack of two and assert the other is nowhere on the page.
-    """
-    from users.models import ObjectPermission
-
-    app, name = model.split('.')
-    permission = ObjectPermission.objects.create(
-        name=f'{model} {"-".join(actions)}', actions=list(actions), constraints=constraints or None
-    )
-    permission.users.add(user)
-    permission.object_types.add(ObjectType.objects.get(app_label=app, model=name))
 
 
 class ViewTestCase(LensTestCase):

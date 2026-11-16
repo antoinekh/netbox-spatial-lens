@@ -929,6 +929,100 @@
   color: var(--lens-on-accent);
 }
 
+/* A layer being calibrated takes the pointer, and the racks stand back so the drawing under
+   them can be read. */
+.lens-floor--calibrating .lens-layers image.is-calibrating {
+  pointer-events: all;
+  cursor: move;
+}
+
+.lens-floor--calibrating .lens-racks {
+  pointer-events: none;
+  opacity: .35;
+}
+
+.lens-calibration__outline {
+  fill: none;
+  stroke: var(--lens-accent);
+  pointer-events: none;
+}
+
+.lens-calibration__handle {
+  fill: var(--lens-bg);
+  stroke: var(--lens-accent);
+  cursor: nwse-resize;
+}
+
+.lens-calibration__measure {
+  pointer-events: none;
+}
+
+.lens-calibration__measure circle {
+  fill: var(--lens-warning);
+}
+
+.lens-calibration__measure line {
+  stroke: var(--lens-warning);
+}
+
+.lens-layer {
+  padding: .375rem 0;
+}
+
+.lens-layer + .lens-layer {
+  border-top: 1px solid var(--lens-border);
+}
+
+.lens-layer__head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.lens-layer__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lens-layer.is-dirty .lens-layer__name {
+  color: var(--lens-warning);
+}
+
+.lens-layer__tools {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  padding-top: .5rem;
+  font-size: .875rem;
+}
+
+.lens-layer__tools[hidden],
+.lens-layer__scale[hidden] {
+  display: none;
+}
+
+.lens-layer__tools label {
+  display: flex;
+  flex-direction: column;
+  gap: .125rem;
+  margin: 0;
+}
+
+.lens-layer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lens-layer__scale {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
 .lens-editor-status {
   min-height: 1.5rem;
   font-size: .875rem;

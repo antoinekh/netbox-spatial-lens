@@ -77,7 +77,7 @@ Install it like any NetBox plugin: `pip install netbox-spatial-lens`, add `netbo
 2. **Place the racks:** open the floor, choose **Edit layout**, then drag each rack from the list onto the plan and rotate it. Rack sizes come from NetBox.
 3. **Look at it:** colour by power, cooling, space or role, and click a rack to open it.
 
-Optional: add a background plan, and set site coordinates for the world map.
+Optional: add a background plan (an image or a PDF) and put it to scale with **Calibrate** in the layout editor, and set site coordinates for the world map.
 
 For the development stack, the demo database, and the commands that populate it, see [docs/development.md](docs/development.md).
 

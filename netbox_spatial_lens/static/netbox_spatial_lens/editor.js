@@ -57,6 +57,11 @@
 
   const undone = [];
   const redone = [];
+  // What else on the floor is edited here and saved with the racks, such as the background
+  // layers. A part gives `snapshot()`, `restore(state)`, `pending()`, the number of its unsaved
+  // changes, `claims(event)`, true when a press on the plan is its own, `position()`, the text for what it has
+  // selected, and `save(failures)`.
+  const parts = [];
   // The rack and the time of the last arrow-key move, so a run of presses is one step.
   let lastNudge = { id: null, at: 0 };
 
@@ -65,7 +70,7 @@
     svg.querySelectorAll('.lens-rack').forEach(function (node) {
       placed.set(node.dataset.rackId, { x: node.dataset.x, y: node.dataset.y, rotation: node.dataset.rotation });
     });
-    return { placed: placed, pending: new Map(pending) };
+    return { placed: placed, pending: new Map(pending), parts: parts.map((part) => part.snapshot()) };
   }
 
   function restore(state) {
@@ -87,6 +92,7 @@
     state.pending.forEach((intent, rackId) => pending.set(rackId, intent));
     pendingRack = null;
     unplacedPanel.querySelectorAll('.is-selected').forEach((node) => node.classList.remove('is-selected'));
+    parts.forEach((part, index) => part.restore(state.parts[index]));
     if (selected && !selected.isConnected) select(null);
     refreshControls();
   }
@@ -114,7 +120,7 @@
   function showPosition() {
     if (!position) return;
     if (!selected) {
-      position.textContent = '';
+      position.textContent = parts.map((part) => part.position()).find(Boolean) || '';
       return;
     }
     const data = selected.dataset;
@@ -169,20 +175,23 @@
     refreshControls();
   }
 
+  function changeCount() {
+    return parts.reduce((count, part) => count + part.pending(), pending.size);
+  }
+
   function refreshControls() {
     const hasSelection = Boolean(selected);
+    const changes = changeCount();
     // A rack placed in this session can always be taken off again: there is nothing to delete
     // on the server yet. A saved one needs the delete permission.
     const removable = selected && (config.canDelete || pending.get(selected.dataset.rackId) === 'create');
     removeButton.disabled = !removable;
     rotateButtons.forEach((b) => { b.disabled = !hasSelection; });
-    saveButton.disabled = pending.size === 0;
+    saveButton.disabled = changes === 0;
     if (undoButton) undoButton.disabled = undone.length === 0;
     if (redoButton) redoButton.disabled = redone.length === 0;
     showPosition();
-    status.textContent = pending.size
-      ? `${pending.size} unsaved change${pending.size === 1 ? '' : 's'}`
-      : '';
+    status.textContent = changes ? `${changes} unsaved change${changes === 1 ? '' : 's'}` : '';
   }
 
   /* ----------------------------------------------------------------------
@@ -192,6 +201,7 @@
   let drag = null;
 
   svg.addEventListener('pointerdown', function (event) {
+    if (parts.some((part) => part.claims(event))) return;
     const node = event.target.closest('.lens-rack');
     if (!node) {
       if (pendingRack) placeRack(event);
@@ -540,6 +550,8 @@
       }
     }
 
+    for (const part of parts) await part.save(failures);
+
     if (failures.length) {
       refreshControls();
       status.textContent = `${failures.length} change${failures.length === 1 ? '' : 's'} failed. See the console.`;
@@ -557,8 +569,24 @@
   });
 
   window.addEventListener('beforeunload', function (event) {
-    if (pending.size) event.preventDefault();
+    if (changeCount()) event.preventDefault();
   });
+
+  window.lensEditor = {
+    svg: svg,
+    status: status,
+    showPosition: showPosition,
+    grid: grid,
+    toRoom: toRoom,
+    checkpoint: checkpoint,
+    refreshControls: refreshControls,
+    request: request,
+    select: select,
+    addPart: function (part) {
+      parts.push(part);
+      refreshControls();
+    },
+  };
 
   refreshControls();
 })();
