@@ -94,6 +94,24 @@ class FloorViewTest(ViewTestCase):
         self.assertContains(response, 'No data')
         self.assertContains(response, 'lens-legend__count')
 
+    def test_a_default_colouring_with_no_data_gives_way_to_one_that_has_some(self):
+        # The rack has no feed, so Power, the default, has nothing to say; it has a height, so
+        # Space does.
+        response = self.client.get(self.floor.get_absolute_url())
+        self.assertEqual(response.context['overlay'].name, 'space')
+        self.assertTrue(all(p.has_data for p in response.context['placed_racks']))
+        self.assertContains(response, 'Power has no data on this floor.')
+
+    def test_a_colouring_the_reader_named_is_kept_even_with_no_data(self):
+        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=power')
+        self.assertEqual(response.context['overlay'].name, 'power')
+        self.assertNotContains(response, 'has no data on this floor.')
+
+    def test_a_default_colouring_with_data_is_kept(self):
+        power_feed(self.rack)
+        response = self.client.get(self.floor.get_absolute_url())
+        self.assertEqual(response.context['overlay'].name, 'power')
+
     def test_the_floor_counts_the_racks_not_yet_placed(self):
         make_rack(self.site, name='R2')
         response = self.client.get(self.floor.get_absolute_url())

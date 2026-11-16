@@ -215,6 +215,9 @@
           recorded this", never as a clean bill of health.
           {% endcomment %}
           {% include 'netbox_spatial_lens/inc/legend.html' with legend=legend filter='racks' %}
+          {% if silent_overlay %}
+            <p class="text-muted small mt-2 mb-0">{{ silent_overlay.label }} has no data on this floor.</p>
+          {% endif %}
         </div>
       </div>
     {% endif %}

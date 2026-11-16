@@ -31,13 +31,14 @@ from netbox_spatial_lens.geometry import floor_viewport, metre_ticks, rack_footp
 from netbox_spatial_lens.layout import (
     build_layout,
     build_layouts,
+    first_colouring_with_data,
     floor_summary,
     rack_rows,
     resolve_overlay,
     unplaced_racks,
 )
 from netbox_spatial_lens.models import Floor, FloorLayer, RackPlacement
-from netbox_spatial_lens.overlays import get_overlays
+from netbox_spatial_lens.overlays import get_overlay, get_overlays
 from netbox_spatial_lens.palette import (
     HIGHLIGHT,
     HIGHLIGHT_DARK,
@@ -134,6 +135,13 @@ class FloorView(generic.ObjectView):
         racks = Rack.objects.restrict(request.user, 'view')
         devices = Device.objects.restrict(request.user, 'view')
         placed = build_layout(instance, overlay, racks=racks, devices=devices)
+        # The colouring the reader did not choose and that has no data here gives way to the
+        # first one that has some, and the page says which one stood aside.
+        silent_overlay = None
+        if placed and get_overlay(request.GET.get('overlay')) is None and not any(p.has_data for p in placed):
+            fallback = first_colouring_with_data(placed, get_overlays(), tried=overlay)
+            if fallback:
+                silent_overlay, overlay = overlay, fallback
         # Custom fields offered as filters, like tags: each rack carries its values for the
         # finder and the table, and names them in its hover card.
         filters = field_filters((p.rack for p in placed), Rack)
@@ -161,6 +169,7 @@ class FloorView(generic.ObjectView):
             },
             'overlays': get_overlays(),
             'overlay': overlay,
+            'silent_overlay': silent_overlay,
             'stats': floor_summary(instance, placed),
             # The scale, so the plan is a drawing rather than a picture of one.
             'view': view,

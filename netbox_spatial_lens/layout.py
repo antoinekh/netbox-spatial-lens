@@ -28,6 +28,8 @@ __all__ = (
     'RackRow',
     'build_layout',
     'build_layouts',
+    'colour_layout',
+    'first_colouring_with_data',
     'floor_summary',
     'rack_rows',
     'resolve_overlay',
@@ -112,13 +114,9 @@ def _place_racks(placements: Sequence[RackPlacement], overlay, device_counts: di
     """
     One floor's placements as racks to draw, coloured by the overlay.
     """
-    values = overlay.evaluate([placement.rack for placement in placements]) if overlay else {}
-
     placed = []
     for placement in placements:
         width, depth, estimated = rack_footprint_cm(placement.rack)
-        # No overlay, as on the editor, still yields a RackValue: the neutral one.
-        value = values.get(placement.rack.pk) or RackValue()
         device_count = device_counts.get(placement.rack_id, 0)
         placed.append(
             PlacedRack(
@@ -129,15 +127,45 @@ def _place_racks(placements: Sequence[RackPlacement], overlay, device_counts: di
                 width=width,
                 depth=depth,
                 estimated=estimated,
-                value=value,
+                # No overlay, as on the editor, still yields a RackValue: the neutral one.
+                value=RackValue(),
                 facts=_rack_facts(placement.rack, width, depth, estimated, device_count),
-                band=overlay.band_of(value) if overlay else '',
                 device_count=device_count,
             )
         )
+    if overlay:
+        colour_layout(placed, overlay)
     # One type size for the whole drawing, and names trimmed to the cabinets that hold them.
     size_labels(placed)
     return placed
+
+
+def colour_layout(placed: Sequence[PlacedRack], overlay) -> None:
+    """
+    Colour the racks of one floor by `overlay`, in place.
+    """
+    values = overlay.evaluate([p.rack for p in placed])
+    for p in placed:
+        p.value = values.get(p.rack.pk) or RackValue()
+        p.band = overlay.band_of(p.value)
+
+
+def first_colouring_with_data(placed: Sequence[PlacedRack], overlays: Sequence, tried) -> object | None:
+    """
+    Colour the floor by the first of `overlays` that has an answer for any rack, and return it.
+
+    For a floor opened with no colouring named, when the default one, `tried`, has nothing to
+    say: a room drawn all grey on arrival reads as an empty inventory. None, and the floor left
+    as it was, when no colouring has data either.
+    """
+    racks = [p.rack for p in placed]
+    for overlay in overlays:
+        if overlay is tried:
+            continue
+        if any(value.has_data for value in overlay.evaluate(racks).values()):
+            colour_layout(placed, overlay)
+            return overlay
+    return None
 
 
 def _rack_facts(rack, width: float, depth: float, estimated: bool, device_count: int) -> list[tuple[str, str]]:
