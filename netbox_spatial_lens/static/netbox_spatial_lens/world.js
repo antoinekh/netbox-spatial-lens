@@ -57,8 +57,11 @@
    * band had put there a moment earlier. Held here, the line survives whatever else redraws. */
   let bandStatus = '';
 
-  // "4 of 29": every point on the map, provider networks included, which is what a band counts.
+  // What a band is counted against: the sites, which is the figure above the map, and every
+  // point only when the provider networks' own band is among the picks.
   const totalPoints = config.nodes.length;
+  const totalSites = config.nodes.filter((node) => node.kind === 'site').length;
+  const PROVIDER_BAND = 'lens:provider';
 
   /* Whether a node survives the legend filter.
    *
@@ -181,9 +184,8 @@
     }
     if (event.detail.group !== 'sites') return;
     bands = event.detail.bands;
-    // "4 of 29", the same idiom the rack's cabling badge uses, and no noun: a provider network
-    // is on this map and is not a site, so "of 29 sites" would have been a small lie.
-    bandStatus = bands.length ? `${event.detail.label}: ${event.detail.count} of ${totalPoints}` : '';
+    const total = bands.includes(PROVIDER_BAND) ? `${totalPoints} points` : `${totalSites} sites`;
+    bandStatus = bands.length ? `${event.detail.label}: ${event.detail.count} of ${total}` : '';
     apply();
     // After apply(), which rewrites the status line for a selection and would otherwise wipe
     // this in the same breath.
@@ -632,7 +634,14 @@
       settle();
     });
 
-    map.fitBounds(bounds, { padding: 60, maxZoom: 9, animate: false });
+    // The legends float over the right of the map, so the estate is fitted to what is left of it.
+    const legends = document.querySelector('[data-lens-legends]');
+    const covered = legends && mapEl.clientWidth > legends.offsetWidth * 3 ? legends.offsetWidth + 24 : 0;
+    map.fitBounds(bounds, {
+      padding: { top: 60, bottom: 60, left: 60, right: 60 + covered },
+      maxZoom: 9,
+      animate: false,
+    });
     message.hidden = true;
     apply();
   }

@@ -25,6 +25,8 @@
 - **Floor plans:** a floor opened with no colouring named uses the first colouring that has data when the default one has none, and the legend says which one had no data. A floor with no feed recorded opened all grey on Power. A colouring named in the URL is kept as it is.
 - **Floor plans:** the rack table has the look of a NetBox list and scrolls in its own area with its headings held at the top, and the legend column stays in view while the page scrolls.
 - **Changed:** a legend band picked in a shared link is named, not given as a colour: `#band-racks=90-and-over`, a provider's name for a circuit band and the kind for a cable band. A link saved before this change loses its band and opens with nothing picked.
+- **Fixed:** the world map opens with every site clear of the legends panel, and a picked band is counted against the sites ("Europe: 4 of 29 sites"), the figure above the map.
+- **Fixed:** the open Sites or Circuits button keeps a readable text colour, a link pasted into a tab that already shows the page is applied, and the cable finder of a rack also finds a cable by its kind, such as "power".
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)
