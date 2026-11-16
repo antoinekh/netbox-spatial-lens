@@ -1,3 +1,4 @@
+{% load lens %}
 {% comment %}
 One kind of port on one device, or across the rack: how many are in use and how many are left.
 The bar is the quick read; the numbers are the answer.
@@ -11,6 +12,6 @@ The bar is the quick read; the numbers are the answer.
   </div>
   <div class="lens-alloc__bar" role="img"
        aria-label="{{ group.connected }} of {{ group.total }} {{ group.label|lower }} connected">
-    <span class="lens-alloc__fill lens-alloc__fill--{{ group.kind }}" style="width: {{ group.percent|floatformat:1 }}%;"></span>
+    <span class="lens-alloc__fill lens-alloc__fill--{{ group.kind }}" style="width: {{ group.percent|num }}%;"></span>
   </div>
 </div>

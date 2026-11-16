@@ -48,7 +48,7 @@
       <div class="card-body lens-unplaced" data-lens-unplaced>
         {% for rack, width, depth, estimated in unplaced_racks %}
           <div class="lens-unplaced__item" data-lens-rack="{{ rack.pk }}" data-rack-name="{{ rack.name }}"
-               data-width="{{ width|stringformat:'.1f' }}" data-depth="{{ depth|stringformat:'.1f' }}">
+               data-width="{{ width|num }}" data-depth="{{ depth|num }}">
             <span>{{ rack.name }}</span>
             <span class="text-muted small">{{ rack.u_height }}U</span>
           </div>
@@ -74,7 +74,7 @@ every write would come back 403. This renders the readable copy it reads instead
   {
     "floorId": {{ object.pk }},
     "placementsUrl": "{% url 'plugins-api:netbox_spatial_lens-api:rackplacement-list' %}",
-    "gridSize": {{ grid_size|default:0 }},
+    "gridSize": {{ grid_size|default:0|num }},
     "canAdd": {{ can_add|yesno:"true,false" }},
     "canDelete": {{ can_delete|yesno:"true,false" }}
   }

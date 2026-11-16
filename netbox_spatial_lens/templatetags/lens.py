@@ -53,6 +53,15 @@ def lens_palette() -> str:
 
 
 @register.filter
+def num(value, places: int = 1) -> str:
+    """
+    A number as SVG, CSS and JavaScript read it: a point for the decimal mark, whatever the
+    reader's language. Django writes `12,5` for a French reader, which none of the three parse.
+    """
+    return f'{float(value):.{int(places)}f}'
+
+
+@register.filter
 def json_facts(facts) -> str:
     """
     Label/value pairs as JSON, safe to sit in a data attribute.

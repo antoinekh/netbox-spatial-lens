@@ -168,14 +168,14 @@
                   <td class="lens-num" data-sort-value="{{ row.rack.u_height }}">{{ row.rack.u_height }}U</td>
                   <td class="lens-num" data-sort-value="{{ row.placed.device_count }}">{{ row.placed.device_count }}</td>
                   {% if row.space_percent is not None %}
-                    <td class="lens-num" data-sort-value="{{ row.space_percent|stringformat:'.1f' }}">
+                    <td class="lens-num" data-sort-value="{{ row.space_percent|num }}">
                       {{ row.space_percent|floatformat:0 }}% <span class="text-muted">&middot; {{ row.free_units|floatformat }}U free</span>
                     </td>
                   {% else %}
                     <td class="lens-num" data-sort-value="">{{ ''|placeholder }}</td>
                   {% endif %}
                   {% if row.power_percent is not None %}
-                    <td class="lens-num" data-sort-value="{{ row.power_percent|stringformat:'.1f' }}">
+                    <td class="lens-num" data-sort-value="{{ row.power_percent|num }}">
                       {{ row.power_percent|floatformat:0 }}% <span class="text-muted">of {{ row.power_capacity_kw|floatformat }} kW</span>
                     </td>
                   {% else %}

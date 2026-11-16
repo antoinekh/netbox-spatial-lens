@@ -14,12 +14,12 @@ Identity and geometry ride on data attributes. The editor reads and writes those
 re-parses the page.
 {% endcomment %}
 <svg class="lens-floor"
-     viewBox="-{{ view.margin|floatformat:1 }} -{{ view.margin|floatformat:1 }} {{ view.view_width|floatformat:1 }} {{ view.view_depth|floatformat:1 }}"
+     viewBox="-{{ view.margin|num }} -{{ view.margin|num }} {{ view.view_width|num }} {{ view.view_depth|num }}"
      preserveAspectRatio="xMidYMid meet"
      {% if zoomable %}data-lens-zoomable{% endif %}
      data-floor-id="{{ floor.pk }}"
-     data-width="{{ floor.width_cm }}" data-depth="{{ floor.depth_cm }}"
-     data-grid="{{ grid_size|default:0 }}">
+     data-width="{{ floor.width_cm|num }}" data-depth="{{ floor.depth_cm|num }}"
+     data-grid="{{ grid_size|default:0|num }}">
 
   <defs>
     {% comment %}
@@ -28,9 +28,9 @@ re-parses the page.
     same step the scale along the edges is labelled in, so a square on the plan is a square
     somebody can pace out.
     {% endcomment %}
-    <pattern id="lens-grid-{{ floor.pk }}" width="{{ view.step|floatformat:1 }}" height="{{ view.step|floatformat:1 }}"
+    <pattern id="lens-grid-{{ floor.pk }}" width="{{ view.step|num }}" height="{{ view.step|num }}"
              patternUnits="userSpaceOnUse">
-      <path d="M {{ view.step|floatformat:1 }} 0 L 0 0 0 {{ view.step|floatformat:1 }}" fill="none" class="lens-grid-line"/>
+      <path d="M {{ view.step|num }} 0 L 0 0 0 {{ view.step|num }}" fill="none" class="lens-grid-line"/>
     </pattern>
   </defs>
 
@@ -39,19 +39,19 @@ re-parses the page.
   about how far apart they are or whether a pallet fits down the aisle. Drawn outside the room
   on two edges, in metres, because metres are what somebody pacing a room counts in.
   {% endcomment %}
-  <g class="lens-scale-rule" aria-hidden="true" style="font-size: {{ view.font|floatformat:1 }}px;">
+  <g class="lens-scale-rule" aria-hidden="true" style="font-size: {{ view.font|num }}px;">
     {% for pos, name in x_ticks %}
-      <line x1="{{ pos|floatformat:1 }}" y1="-{{ view.tick_size|floatformat:1 }}" x2="{{ pos|floatformat:1 }}" y2="0"/>
-      <text x="{{ pos|floatformat:1 }}" y="-{{ view.tick_gap|floatformat:1 }}" text-anchor="middle">{{ name }}</text>
+      <line x1="{{ pos|num }}" y1="-{{ view.tick_size|num }}" x2="{{ pos|num }}" y2="0"/>
+      <text x="{{ pos|num }}" y="-{{ view.tick_gap|num }}" text-anchor="middle">{{ name }}</text>
     {% endfor %}
     {% for pos, name in y_ticks %}
-      <line x1="-{{ view.tick_size|floatformat:1 }}" y1="{{ pos|floatformat:1 }}" x2="0" y2="{{ pos|floatformat:1 }}"/>
-      <text x="-{{ view.tick_gap|floatformat:1 }}" y="{{ pos|floatformat:1 }}" text-anchor="end" dominant-baseline="middle">{{ name }}</text>
+      <line x1="-{{ view.tick_size|num }}" y1="{{ pos|num }}" x2="0" y2="{{ pos|num }}"/>
+      <text x="-{{ view.tick_gap|num }}" y="{{ pos|num }}" text-anchor="end" dominant-baseline="middle">{{ name }}</text>
     {% endfor %}
-    <text class="lens-scale-rule__unit" x="-{{ view.tick_gap|floatformat:1 }}" y="-{{ view.tick_gap|floatformat:1 }}" text-anchor="end">m</text>
+    <text class="lens-scale-rule__unit" x="-{{ view.tick_gap|num }}" y="-{{ view.tick_gap|num }}" text-anchor="end">m</text>
   </g>
 
-  <rect x="0" y="0" width="{{ floor.width_cm }}" height="{{ floor.depth_cm }}" class="lens-room"/>
+  <rect x="0" y="0" width="{{ floor.width_cm|num }}" height="{{ floor.depth_cm|num }}" class="lens-room"/>
 
   {% comment %}
   Background layers: an architectural drawing or a photograph, placed in room centimetres and
@@ -62,18 +62,18 @@ re-parses the page.
     <g class="lens-layers">
       {% for layer in layers %}
         <image href="{{ layer.source }}"
-               x="{{ layer.x|floatformat:1 }}" y="{{ layer.y|floatformat:1 }}"
-               width="{{ layer.width|floatformat:1 }}" height="{{ layer.height|floatformat:1 }}"
-               opacity="{{ layer.opacity }}"
+               x="{{ layer.x|num }}" y="{{ layer.y|num }}"
+               width="{{ layer.width|num }}" height="{{ layer.height|num }}"
+               opacity="{{ layer.opacity|num:2 }}"
                preserveAspectRatio="none"
-               {% if layer.rotation %}transform="rotate({{ layer.rotation|floatformat:1 }} {{ layer.centre_x|floatformat:1 }} {{ layer.centre_y|floatformat:1 }})"{% endif %}>
+               {% if layer.rotation %}transform="rotate({{ layer.rotation|num }} {{ layer.centre_x|num }} {{ layer.centre_y|num }})"{% endif %}>
           <title>{{ layer.name }}</title>
         </image>
       {% endfor %}
     </g>
   {% endif %}
 
-  <rect x="0" y="0" width="{{ floor.width_cm }}" height="{{ floor.depth_cm }}"
+  <rect x="0" y="0" width="{{ floor.width_cm|num }}" height="{{ floor.depth_cm|num }}"
         fill="url(#lens-grid-{{ floor.pk }})"/>
 
   {% comment %}
@@ -87,11 +87,11 @@ re-parses the page.
         {% if exit.url %}<a href="{{ exit.url }}">{% endif %}
         <g class="lens-floor-exit" data-rack-id="{{ exit.rack.rack.pk }}" data-kind="{{ exit.kind }}">
           <title>{{ exit.title }}</title>
-          <line x1="{{ exit.rack.x|floatformat:1 }}" y1="{{ exit.rack.y|floatformat:1 }}"
-                x2="{{ exit.x|floatformat:1 }}" y2="{{ exit.y|floatformat:1 }}"
-                stroke="{{ exit.colour }}" stroke-width="{{ exit.width|floatformat:1 }}"/>
-          <circle cx="{{ exit.x|floatformat:1 }}" cy="{{ exit.y|floatformat:1 }}"
-                  r="{{ exit.radius|floatformat:1 }}" fill="{{ exit.colour }}"/>
+          <line x1="{{ exit.rack.x|num }}" y1="{{ exit.rack.y|num }}"
+                x2="{{ exit.x|num }}" y2="{{ exit.y|num }}"
+                stroke="{{ exit.colour }}" stroke-width="{{ exit.width|num }}"/>
+          <circle cx="{{ exit.x|num }}" cy="{{ exit.y|num }}"
+                  r="{{ exit.radius|num }}" fill="{{ exit.colour }}"/>
         </g>
         {% if exit.url %}</a>{% endif %}
       {% endfor %}
@@ -102,9 +102,9 @@ re-parses the page.
     <g class="lens-floor-runs">
       {% for run in runs %}
         <line class="lens-floor-run"
-              x1="{{ run.a.x|floatformat:1 }}" y1="{{ run.a.y|floatformat:1 }}"
-              x2="{{ run.b.x|floatformat:1 }}" y2="{{ run.b.y|floatformat:1 }}"
-              stroke-width="{{ run.width|floatformat:1 }}"
+              x1="{{ run.a.x|num }}" y1="{{ run.a.y|num }}"
+              x2="{{ run.b.x|num }}" y2="{{ run.b.y|num }}"
+              stroke-width="{{ run.width|num }}"
               data-rack-a="{{ run.a.rack.pk }}" data-rack-b="{{ run.b.rack.pk }}">
           <title>{{ run.label }}</title>
         </line>
@@ -131,14 +131,14 @@ re-parses the page.
          data-colour="{{ p.colour }}"
          data-value="{{ p.label }}"
          data-facts="{{ p.facts|json_facts }}"
-         data-x="{{ p.x|floatformat:1 }}" data-y="{{ p.y|floatformat:1 }}"
-         data-rotation="{{ p.rotation|floatformat:1 }}"
-         data-width="{{ p.width|floatformat:1 }}" data-depth="{{ p.depth|floatformat:1 }}"
-         transform="translate({{ p.x|floatformat:1 }} {{ p.y|floatformat:1 }}) rotate({{ p.rotation|floatformat:1 }})">
+         data-x="{{ p.x|num }}" data-y="{{ p.y|num }}"
+         data-rotation="{{ p.rotation|num }}"
+         data-width="{{ p.width|num }}" data-depth="{{ p.depth|num }}"
+         transform="translate({{ p.x|num }} {{ p.y|num }}) rotate({{ p.rotation|num }})">
         <title>{{ p.rack.name }}{% if p.label %} &#183; {{ p.label }}{% endif %}{% if p.estimated %} &#183; footprint estimated{% endif %}</title>
         <rect class="lens-rack-body"
-              x="{{ p.offset_x|floatformat:1 }}" y="{{ p.offset_y|floatformat:1 }}"
-              width="{{ p.width|floatformat:1 }}" height="{{ p.depth|floatformat:1 }}"
+              x="{{ p.offset_x|num }}" y="{{ p.offset_y|num }}"
+              width="{{ p.width|num }}" height="{{ p.depth|num }}"
               {% if p.colour %}style="fill: {{ p.colour }};"{% endif %}
               rx="4"/>
         {% comment %}
@@ -146,8 +146,8 @@ re-parses the page.
         180-degree rotation is invisible and the plan cannot be checked against the room.
         {% endcomment %}
         <rect class="lens-rack-front"
-              x="{{ p.offset_x|floatformat:1 }}" y="{{ p.offset_y|floatformat:1 }}"
-              width="{{ p.width|floatformat:1 }}" height="7"/>
+              x="{{ p.offset_x|num }}" y="{{ p.offset_y|num }}"
+              width="{{ p.width|num }}" height="7"/>
 
         {% comment %}
         The gauge. A band alone cannot tell 12% from 48%: both are "under 50%", both draw the
@@ -157,12 +157,12 @@ re-parses the page.
         {% endcomment %}
         {% if p.fraction != None %}
           <rect class="lens-rack-gauge__track"
-                x="{{ p.gauge_x|floatformat:1 }}" y="{{ p.gauge_y|floatformat:1 }}"
-                width="{{ p.gauge_track_width|floatformat:1 }}" height="{{ p.gauge_height|floatformat:1 }}"
+                x="{{ p.gauge_x|num }}" y="{{ p.gauge_y|num }}"
+                width="{{ p.gauge_track_width|num }}" height="{{ p.gauge_height|num }}"
                 rx="2"/>
           <rect class="lens-rack-gauge__fill"
-                x="{{ p.gauge_x|floatformat:1 }}" y="{{ p.gauge_y|floatformat:1 }}"
-                width="{{ p.gauge_width|floatformat:1 }}" height="{{ p.gauge_height|floatformat:1 }}"
+                x="{{ p.gauge_x|num }}" y="{{ p.gauge_y|num }}"
+                width="{{ p.gauge_width|num }}" height="{{ p.gauge_height|num }}"
                 style="fill: {{ p.colour }};" rx="2"/>
         {% endif %}
 
@@ -172,12 +172,12 @@ re-parses the page.
         the same size for every rack on the floor, set from the smallest cabinet, so the plan
         reads as one drawing rather than as a ransom note.
         {% endcomment %}
-        <text class="lens-rack-label" x="0" y="{% if p.fraction != None %}-{{ p.label_size|floatformat:1 }}{% else %}0{% endif %}"
-              style="font-size: {{ p.label_size|floatformat:1 }}px;"
+        <text class="lens-rack-label" x="0" y="{% if p.fraction != None %}-{{ p.label_size|num }}{% else %}0{% endif %}"
+              style="font-size: {{ p.label_size|num }}px;"
               dominant-baseline="middle" text-anchor="middle">{{ p.display_name|default:p.rack.name }}</text>
         {% if p.fraction != None %}
-          <text class="lens-rack-value" x="0" y="{{ p.label_size|floatformat:1 }}"
-                style="font-size: {{ p.label_size|floatformat:1 }}px;"
+          <text class="lens-rack-value" x="0" y="{{ p.label_size|num }}"
+                style="font-size: {{ p.label_size|num }}px;"
                 dominant-baseline="middle" text-anchor="middle">{{ p.gauge_label }}</text>
           {% endif %}
       </g>

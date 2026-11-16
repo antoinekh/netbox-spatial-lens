@@ -105,6 +105,31 @@ class FloorViewTest(ViewTestCase):
         self.assertContains(response, 'csrfmiddlewaretoken')
 
 
+class LocaleTest(ViewTestCase):
+    """
+    A reader whose language writes a comma for the decimal mark gets the same drawing.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.floor = Floor.objects.create(name='Hall', site=self.site, width='12.5', depth=8)
+        place(self.floor, make_rack(self.site), x='100.5', y=100)
+
+    def french(self, url: str):
+        return self.client.get(url, headers={'accept-language': 'fr'})
+
+    def test_the_plan_is_drawn_with_decimal_points(self):
+        response = self.french(self.floor.get_absolute_url())
+        self.assertContains(response, 'translate(100.5 100.0)')
+        self.assertContains(response, 'data-width="1250.0"')
+        self.assertNotContains(response, 'translate(100,5')
+
+    def test_the_editor_reads_the_room_with_decimal_points(self):
+        response = self.french(reverse('plugins:netbox_spatial_lens:floor_layout', args=[self.floor.pk]))
+        self.assertContains(response, 'data-width="1250.0"')
+        self.assertContains(response, 'data-x="100.5"')
+
+
 class RackViewTest(ViewTestCase):
     def test_the_rack_can_be_looked_at_from_the_front_and_the_rear(self):
         rack = make_rack(self.site, u_height=10)
