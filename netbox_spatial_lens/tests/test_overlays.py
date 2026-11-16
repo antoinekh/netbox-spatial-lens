@@ -422,6 +422,15 @@ class RedundancyOverlayTest(LensTestCase):
         self.assertEqual(value.label, '1 of 3 devices on one feed, 1 of 3 with no feed traced')
         self.assertEqual(overlay.band_of(value), 'single')
 
+    def test_a_rack_is_not_gauged_by_its_count_of_devices(self):
+        from netbox_spatial_lens.layout import build_layout
+        from netbox_spatial_lens.tests.base import make_floor, place
+
+        floor = make_floor(self.site, name='Powered')
+        place(floor, self.rack)
+        placed = build_layout(floor, get_overlay('redundancy'))[0]
+        self.assertIsNone(placed.fraction)
+
     def test_a_rack_of_redundant_devices_is_green(self):
         rack = make_rack(self.site, name='R-ok', u_height=10)
         server = make_device(self.site, rack, 'ok', self.role, self.manufacturer, position=1, power_ports=2)

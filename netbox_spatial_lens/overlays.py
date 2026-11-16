@@ -584,9 +584,9 @@ def space_overlay(racks: Sequence) -> dict[int, RackValue]:
 
 # The legend of the racks reads the same three states over a rack's devices.
 REDUNDANCY_RACK_LABELS = {
-    'redundant': 'Every device on two or more feeds',
-    'untraced': 'A device with no feed traced',
-    'single': 'A device on one feed',
+    'redundant': 'All on two or more feeds',
+    'untraced': 'Some with no feed traced',
+    'single': 'Some on one feed',
 }
 REDUNDANCY_LEGEND = [LegendEntry(colour, REDUNDANCY_RACK_LABELS[key], key=key) for key, colour, _ in REDUNDANCY]
 
@@ -629,7 +629,8 @@ def redundancy_overlay(racks: Sequence) -> dict[int, RackValue]:
         values[rack_id] = RackValue(
             colour=colours[worst],
             label=', '.join(parts) or f'{total} of {total} devices on two or more feeds',
-            value=counts['single'],
+            # The state, not a count: a number here is drawn as a percentage on the rack.
+            value=worst,
         )
     return values
 
