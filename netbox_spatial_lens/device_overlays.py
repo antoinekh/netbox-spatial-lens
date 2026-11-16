@@ -28,6 +28,7 @@ from netbox_spatial_lens.overlays import (
 from netbox_spatial_lens.palette import (
     COMPLETION,
     NO_ROLE,
+    REDUNDANCY,
     STATUS_COLOURS,
     completion_colour,
     distinct_colours,
@@ -172,12 +173,41 @@ def power_overlay(mounted: Sequence) -> dict[int, RackValue]:
     return values
 
 
+REDUNDANCY_LEGEND = [LegendEntry(colour, label, key=key) for key, colour, label in REDUNDANCY]
+REDUNDANCY_COLOURS = {key: colour for key, colour, _ in REDUNDANCY}
+
+
+def redundancy_overlay(mounted: Sequence) -> dict[int, RackValue]:
+    """
+    How many power feeds each device reaches.
+
+    A device with two supplies cabled to one feed, or with one of them not cabled, goes dark
+    with that feed. The power colouring cannot show it: both devices draw the same.
+    """
+    values = {}
+    for m in mounted:
+        power = getattr(m, 'power', None)
+        state = power.redundancy if power is not None else None
+        if state is None:
+            continue
+        sources = sorted(power.sources.values())
+        if sources:
+            label = f'{len(sources)} feed{"s" if len(sources) != 1 else ""}: {", ".join(sources)}'
+        else:
+            label = 'No feed traced'
+        values[m.device.pk] = RackValue(colour=REDUNDANCY_COLOURS[state], label=label, value=len(sources))
+    return values
+
+
 BUILTIN_DEVICE_OVERLAYS = {
     'role': BuiltinColouring('Role', role_overlay, 'The device role, in its own colour.'),
     'status': BuiltinColouring('Status', status_overlay, 'What is live, staged, failed or planned.'),
     'tenant': BuiltinColouring('Tenant', tenant_overlay, 'Who owns each device.'),
     'cabling': BuiltinColouring('Cabling', cabling_overlay, 'How much of each device is plugged in.', CABLING_LEGEND),
     'power': BuiltinColouring('Power', power_overlay, 'Allocated draw against the device maximum.', UTILISATION_LEGEND),
+    'redundancy': BuiltinColouring(
+        'Redundancy', redundancy_overlay, 'How many power feeds each device reaches.', REDUNDANCY_LEGEND
+    ),
 }
 
 # The rack view's colourings. The functions below are the names other plugins register with.

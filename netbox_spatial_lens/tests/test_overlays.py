@@ -4,7 +4,7 @@ Overlays, their legends, and the rule that no data is never good news.
 
 import copy
 
-from dcim.models import PowerPort
+from dcim.models import PowerOutlet, PowerPort
 from django.conf import settings
 from django.test import override_settings
 
@@ -345,3 +345,107 @@ class PowerOverlayTest(LensTestCase):
         allocated, capacity = floor_power_utilisation([rack])[rack.pk]
         self.assertEqual(allocated, 0)
         self.assertAlmostEqual(allocated / capacity * 100, rack.get_power_utilization(), places=1)
+
+
+class RedundancyOverlayTest(LensTestCase):
+    """
+    Which devices depend on a single power feed, on the floor and in the rack.
+
+    One rack with two feeds, a PDU on each, and three servers: one cabled to both PDUs, one to
+    a single PDU, and one with a supply left uncabled.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.rack = make_rack(cls.site, name='R-power', u_height=20)
+        cls.pdus = []
+        for index, side in enumerate(('a', 'b')):
+            pdu = make_device(
+                cls.site,
+                cls.rack,
+                f'pdu-{side}',
+                cls.switch_role,
+                cls.manufacturer,
+                position=1 + index,
+                power_ports=1,
+                outlets=1,
+            )
+            cable(pdu.powerports.first(), power_feed(cls.rack, name=f'feed-{side}'))
+            for number in (1, 2):
+                PowerOutlet.objects.create(device=pdu, name=f'extra{number}', power_port=pdu.powerports.first())
+            cls.pdus.append(pdu)
+
+        cls.dual = cls.server('dual', 5)
+        cls.plug(cls.dual, 0, cls.pdus[0], 'outlet0')
+        cls.plug(cls.dual, 1, cls.pdus[1], 'outlet0')
+        cls.single = cls.server('single', 6)
+        cls.plug(cls.single, 0, cls.pdus[0], 'extra1')
+        cls.plug(cls.single, 1, cls.pdus[0], 'extra2')
+        cls.unplugged = cls.server('unplugged', 7)
+
+    @classmethod
+    def server(cls, name, position):
+        return make_device(cls.site, cls.rack, name, cls.role, cls.manufacturer, position=position, power_ports=2)
+
+    @staticmethod
+    def plug(server, port, pdu, outlet):
+        cable(server.powerports.get(name=f'psu{port}'), pdu.poweroutlets.get(name=outlet))
+
+    def device_values(self):
+        from netbox_spatial_lens.device_overlays import get_device_overlay
+        from netbox_spatial_lens.elevation import build_elevation
+
+        mounted = build_elevation(self.rack).devices
+        values = get_device_overlay('redundancy').evaluate(mounted)
+        return {m.device.name: values[m.device.pk] for m in mounted}
+
+    def test_a_device_on_two_feeds_is_redundant_and_names_them(self):
+        value = self.device_values()['dual']
+        self.assertEqual(value.label, '2 feeds: feed-a (feed-a-panel), feed-b (feed-b-panel)')
+        self.assertEqual(value.colour, '#4c9f70')
+
+    def test_two_supplies_on_one_feed_are_one_feed(self):
+        value = self.device_values()['single']
+        self.assertEqual(value.label, '1 feed: feed-a (feed-a-panel)')
+        self.assertEqual(value.colour, '#c9483f')
+
+    def test_a_device_with_nothing_cabled_is_not_traced(self):
+        self.assertEqual(self.device_values()['unplugged'].label, 'No feed traced')
+
+    def test_a_pdu_is_not_judged_for_its_single_inlet(self):
+        self.assertFalse(self.device_values()['pdu-a'].has_data)
+
+    def test_the_worst_device_decides_the_rack_and_the_label_counts_them(self):
+        overlay = get_overlay('redundancy')
+        value = overlay.evaluate([self.rack])[self.rack.pk]
+        self.assertEqual(value.label, '1 of 3 devices on one feed, 1 of 3 with no feed traced')
+        self.assertEqual(overlay.band_of(value), 'single')
+
+    def test_a_rack_of_redundant_devices_is_green(self):
+        rack = make_rack(self.site, name='R-ok', u_height=10)
+        server = make_device(self.site, rack, 'ok', self.role, self.manufacturer, position=1, power_ports=2)
+        cable(server.powerports.get(name='psu0'), power_feed(rack, name='ok-a'))
+        cable(server.powerports.get(name='psu1'), power_feed(rack, name='ok-b'))
+        overlay = get_overlay('redundancy')
+        value = overlay.evaluate([rack])[rack.pk]
+        self.assertEqual(value.label, '1 of 1 devices on two or more feeds')
+        self.assertEqual(overlay.band_of(value), 'redundant')
+
+    def test_a_rack_with_no_powered_device_is_no_data(self):
+        empty = make_rack(self.site, name='R-empty')
+        self.assertFalse(get_overlay('redundancy').evaluate([empty])[empty.pk].has_data)
+
+    def test_the_cost_does_not_grow_with_the_racks(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        overlay = get_overlay('redundancy')
+        with CaptureQueriesContext(connection) as one:
+            overlay.evaluate([self.rack])
+        other = make_rack(self.site, name='R-second', u_height=10)
+        server = make_device(self.site, other, 'second', self.role, self.manufacturer, position=1, power_ports=1)
+        cable(server.powerports.first(), power_feed(other, name='second-feed'))
+        with CaptureQueriesContext(connection) as two:
+            overlay.evaluate([self.rack, other])
+        self.assertLessEqual(len(two), len(one) + 1)

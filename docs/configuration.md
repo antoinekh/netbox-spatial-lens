@@ -8,9 +8,9 @@ Every setting is optional. Set them under `PLUGINS_CONFIG['netbox_spatial_lens']
 | `default_rack_depth` | `1070` | Depth in millimetres used for a rack with no outer depth recorded. |
 | `grid_size` | `10` | Grid the layout editor snaps to, in centimetres. `0` turns snapping off. |
 | `filter_custom_fields` | `[]` | Custom fields to offer as filters, the way tags are: a list of field names. See [Filter by](extending.md#filter-by). |
-| `enable_builtin_overlays` | `True` | Floor colourings to offer: `True` for all, `False` for none, or a list from `'power'`, `'cooling'`, `'space'`, `'role'`. |
+| `enable_builtin_overlays` | `True` | Floor colourings to offer: `True` for all, `False` for none, or a list from `'power'`, `'cooling'`, `'space'`, `'role'`, `'redundancy'`. |
 | `default_overlay` | `'power'` | Floor colouring used when the URL names none. |
-| `enable_builtin_device_overlays` | `True` | Rack colourings to offer: `True`, `False`, or a list from `'role'`, `'status'`, `'tenant'`, `'cabling'`, `'power'`. |
+| `enable_builtin_device_overlays` | `True` | Rack colourings to offer: `True`, `False`, or a list from `'role'`, `'status'`, `'tenant'`, `'cabling'`, `'power'`, `'redundancy'`. |
 | `default_device_overlay` | `'role'` | Rack colouring used when the URL names none. |
 | `enable_builtin_site_overlays` | `True` | World map colourings to offer: `True`, `False`, or a list from `'group'`, `'status'`, `'tenant'`, `'region'`. |
 | `default_site_overlay` | `'group'` | World map colouring used when the URL names none. |

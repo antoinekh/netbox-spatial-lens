@@ -34,13 +34,35 @@ class DevicePower:
     maximum_watts: float = 0
     feeds: list = field(default_factory=list)
     unconnected: int = 0
+    # True for a device with power outlets, such as a PDU: it supplies others.
+    supplies: bool = False
+
+    @property
+    def sources(self) -> dict[int, str]:
+        """The distinct power feeds this device reaches, by id, each named with its panel."""
+        return {entry['feed_id']: f'{entry["feed"]} ({entry["panel"]})' for entry in self.feeds if entry['feed_id']}
+
+    @property
+    def redundancy(self) -> str | None:
+        """
+        How many feeds the device reaches, as a key of `palette.REDUNDANCY`.
+
+        None where the question does not apply: a device with no power port, and a device that
+        supplies others, whose single inlet is by design.
+        """
+        if self.supplies or not (self.feeds or self.unconnected):
+            return None
+        count = len(self.sources)
+        if count >= 2:
+            return 'redundant'
+        return 'single' if count == 1 else 'untraced'
 
     @property
     def has_data(self) -> bool:
         return bool(self.maximum_watts or self.feeds or self.unconnected)
 
 
-def load_device_power(devices: Sequence) -> dict[int, DevicePower]:
+def load_device_power(devices: Sequence, totals: bool = True) -> dict[int, DevicePower]:
     """
     Draw and supply for each device, in a bounded number of queries.
 
@@ -50,7 +72,8 @@ def load_device_power(devices: Sequence) -> dict[int, DevicePower]:
 
     A device that feeds others needs its totals replaced by what draws through it, which costs
     a few more. That too is bounded, by the depth of the power tree rather than by the number
-    of PDUs in the rack.
+    of PDUs in the rack. A caller that only asks where the power comes from passes
+    `totals=False` and is spared them.
     """
     from dcim.models import PowerOutlet, PowerPort
 
@@ -68,7 +91,10 @@ def load_device_power(devices: Sequence) -> dict[int, DevicePower]:
 
     near = {row['cable_id']: row['cable_end'] for row in ports if row['cable_id']}
     peers = peer_ends(near)
-    load_objects(peers.values(), select_related={'poweroutlet': ('device', 'power_port')})
+    load_objects(
+        peers.values(),
+        select_related={'poweroutlet': ('device', 'power_port'), 'powerfeed': ('power_panel',)},
+    )
 
     # The feed behind each PDU inlet those outlets draw from, so the chain reaches past the
     # socket. Collected first, then resolved in one more pair of queries.
@@ -76,7 +102,7 @@ def load_device_power(devices: Sequence) -> dict[int, DevicePower]:
         end.obj.power_port for end in peers.values() if isinstance(end.obj, PowerOutlet) and end.obj.power_port_id
     }
     inlet_peers = peer_ends({i.cable_id: i.cable_end for i in inlets if i.cable_id})
-    load_objects(inlet_peers.values())
+    load_objects(inlet_peers.values(), select_related={'powerfeed': ('power_panel',)})
 
     by_device = {}
     for row in ports:
@@ -98,21 +124,35 @@ def load_device_power(devices: Sequence) -> dict[int, DevicePower]:
                     'port': row['name'],
                     'outlet': f'{target.device} \u00b7 {target}',
                     'feed': str(feed) if _is_feed(feed) else '',
+                    'feed_id': feed.pk if _is_feed(feed) else None,
+                    'panel': str(feed.power_panel) if _is_feed(feed) else '',
                 }
             )
         elif _is_feed(target):
             # A PDU's own inlet cables straight to the feed rather than through an outlet.
             # Recorded here, otherwise the one device in the rack whose supply is certain
             # would be the one shown as having none.
-            power.feeds.append({'port': row['name'], 'outlet': '', 'feed': str(target)})
+            power.feeds.append(
+                {
+                    'port': row['name'],
+                    'outlet': '',
+                    'feed': str(target),
+                    'feed_id': target.pk,
+                    'panel': str(target.power_panel),
+                }
+            )
         else:
             power.unconnected += 1
 
-    _apply_aggregates(device_ids, by_device)
+    feeders = set(PowerOutlet.objects.filter(device_id__in=device_ids).values_list('device_id', flat=True))
+    for device_id in feeders & by_device.keys():
+        by_device[device_id].supplies = True
+    if totals and feeders:
+        _apply_aggregates(feeders, by_device)
     return by_device
 
 
-def _apply_aggregates(device_ids: Sequence[int], by_device: dict[int, DevicePower]) -> None:
+def _apply_aggregates(feeders: set[int], by_device: dict[int, DevicePower]) -> None:
     """
     Replace the administrative totals for devices that feed others.
 
@@ -120,11 +160,7 @@ def _apply_aggregates(device_ids: Sequence[int], by_device: dict[int, DevicePowe
     plugged into it. Summed over the device's power ports, so a dual-corded PDU reports both
     legs rather than whichever leg was read last.
     """
-    from dcim.models import PowerOutlet, PowerPort
-
-    feeders = set(PowerOutlet.objects.filter(device_id__in=device_ids).values_list('device_id', flat=True))
-    if not feeders:
-        return
+    from dcim.models import PowerPort
 
     # Every port of a feeding device, not only the ports that own outlets: a PDU may declare a
     # draw for its own electronics on a second inlet, and that is still load on the feed.

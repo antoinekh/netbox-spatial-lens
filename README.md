@@ -49,7 +49,7 @@ Every room in the site as a small plan with its own figures, on a tab of NetBox'
 
 ### The floor
 
-The room in 3D, every rack a cabinet at its real position, rotation and height, coloured by **power**, **cooling**, **space** or **role**, with the reading rising up its doors and the cable runs arcing over the tops, faint until you hover a rack. Look from the top, at three quarters or from the side, and switch from **Cabinets** to **Devices** to see every rack open with its real devices and their front and rear images. Switch to **2D** for the plan over a scanned drawing, with zoom. Both views share a sortable rack table. Find racks by name or asset tag, narrow them by tag or custom field, and place them in the layout editor.
+The room in 3D, every rack a cabinet at its real position, rotation and height, coloured by **power**, **cooling**, **space**, **role** or **redundancy**, with the reading rising up its doors and the cable runs arcing over the tops, faint until you hover a rack. Look from the top, at three quarters or from the side, and switch from **Cabinets** to **Devices** to see every rack open with its real devices and their front and rear images. Switch to **2D** for the plan over a scanned drawing, with zoom. Both views share a sortable rack table. Find racks by name or asset tag, narrow them by tag or custom field, and place them in the layout editor.
 
 ![A 20.7 by 13.2 metre data hall of 80 cabinets in eight rows of ten, two blocks of four rows either side of a central aisle, their roofs and doors coloured by how full they are, the cable runs resting faint over the room, the two uplinks of rack E05 lit as it is hovered, and its hover card naming what it is cabled to](docs/images/floor-3d.png)
 
@@ -59,7 +59,7 @@ The room in 3D, every rack a cabinet at its real position, rotation and height, 
 
 ### The rack
 
-The cabinet in 3D, with the real front and rear images of each device type, every cable run through the cable managers, and reserved and free units. Turn it, move it and zoom, or jump to the front, the rear or the side. Devices are coloured by **role**, **status**, **tenant**, **cabling** or **power**. Find devices by name or asset tag, and narrow them by tag or custom field. It needs WebGL and Three.js, which loads from a CDN by default or from your own copy.
+The cabinet in 3D, with the real front and rear images of each device type, every cable run through the cable managers, and reserved and free units. Turn it, move it and zoom, or jump to the front, the rear or the side. Devices are coloured by **role**, **status**, **tenant**, **cabling**, **power** or **redundancy**: which devices reach only one power feed. Find devices by name or asset tag, and narrow them by tag or custom field. It needs WebGL and Three.js, which loads from a CDN by default or from your own copy.
 
 ![Rack C04, a 48U cabinet of 49 devices seen from behind and to the side, the switches wearing their real rear panels, the data cables dressed up one cable manager and the power leads up the other, and the two uplinks leaving through the roof, beside the port allocation and cabling panels](docs/images/rack.png)
 
@@ -75,7 +75,7 @@ Install it like any NetBox plugin: `pip install netbox-spatial-lens`, add `netbo
 
 1. **Draw the room:** **Spatial Lens > Floors > Add**. Give its width and depth, and bind it to a **site** (one room) or a **location** (several rooms).
 2. **Place the racks:** open the floor, choose **Edit layout**, then drag each rack from the list onto the plan and rotate it. Rack sizes come from NetBox.
-3. **Look at it:** colour by power, cooling, space or role, and click a rack to open it.
+3. **Look at it:** colour by power, cooling, space, role or redundancy, and click a rack to open it.
 
 Optional: add a background plan (an image or a PDF) and put it to scale with **Calibrate** in the layout editor, and set site coordinates for the world map.
 

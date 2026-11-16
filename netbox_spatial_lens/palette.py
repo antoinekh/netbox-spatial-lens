@@ -31,6 +31,7 @@ __all__ = (
     'NODE',
     'NO_DATA',
     'NO_ROLE',
+    'REDUNDANCY',
     'RESERVED_COLOURS',
     'STATUS_COLOURS',
     'UTILISATION',
@@ -112,6 +113,14 @@ COMPLETION = (
 )
 
 # The world map's two kinds of point.
+# How many power feeds a device reaches: the key, the colour and the legend label. Worst last,
+# because the worst device of a rack decides the colour of the rack.
+REDUNDANCY = (
+    ('redundant', '#4c9f70', 'Two or more feeds'),
+    ('untraced', '#d9b23f', 'No feed traced'),
+    ('single', '#c9483f', 'One feed'),
+)
+
 NODE = {
     'site': '#3f7fbf',
     'provider': '#7b5cc4',

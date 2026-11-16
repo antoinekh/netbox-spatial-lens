@@ -25,12 +25,12 @@ class SpatialLensConfig(PluginConfig):
         # view (devices): a list of field names. Only select and multiselect fields are used.
         'filter_custom_fields': [],
         # Which built-in overlays to register. True for all, False for none, or a list of
-        # names from 'power', 'cooling', 'space' and 'role'.
+        # names from 'power', 'cooling', 'space', 'role' and 'redundancy'.
         'enable_builtin_overlays': True,
         # Overlay selected when a floor is opened without one named.
         'default_overlay': 'power',
         # Which built-in device colourings a rack offers. True for all, False for none, or a
-        # list from 'role', 'status', 'tenant', 'cabling' and 'power'.
+        # list from 'role', 'status', 'tenant', 'cabling', 'power' and 'redundancy'.
         'enable_builtin_device_overlays': True,
         # Colouring selected when a rack is opened without one named.
         'default_device_overlay': 'role',

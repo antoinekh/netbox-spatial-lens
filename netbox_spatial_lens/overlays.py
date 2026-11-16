@@ -23,7 +23,14 @@ from dataclasses import dataclass, field
 from django.utils.text import slugify
 from netbox.plugins import get_plugin_config
 
-from netbox_spatial_lens.palette import COOLING, NO_DATA, UTILISATION, distinct_colours, utilisation_colour
+from netbox_spatial_lens.palette import (
+    COOLING,
+    NO_DATA,
+    REDUNDANCY,
+    UTILISATION,
+    distinct_colours,
+    utilisation_colour,
+)
 
 __all__ = (
     'BUILTIN_OVERLAYS',
@@ -575,6 +582,58 @@ def space_overlay(racks: Sequence) -> dict[int, RackValue]:
     return values
 
 
+# The legend of the racks reads the same three states over a rack's devices.
+REDUNDANCY_RACK_LABELS = {
+    'redundant': 'Every device on two or more feeds',
+    'untraced': 'A device with no feed traced',
+    'single': 'A device on one feed',
+}
+REDUNDANCY_LEGEND = [LegendEntry(colour, REDUNDANCY_RACK_LABELS[key], key=key) for key, colour, _ in REDUNDANCY]
+
+
+def redundancy_overlay(racks: Sequence) -> dict[int, RackValue]:
+    """
+    Whether a device in each rack depends on a single power feed.
+
+    Counted over the devices, not over the feeds of the rack: a rack with two feeds and a server
+    cabled to one of them loses that server with the feed, and a count of feeds calls it safe.
+    The worst device decides the colour, and the label says how many there are.
+
+    A rack where no device has a power port is absent, and so reads as no data.
+    """
+    from dcim.models import Device
+
+    from netbox_spatial_lens.power import load_device_power
+
+    devices = list(Device.objects.filter(rack_id__in=[rack.pk for rack in racks]).only('pk', 'rack_id'))
+    power = load_device_power(devices, totals=False)
+
+    tally: dict[int, dict[str, int]] = {}
+    for device in devices:
+        state = power[device.pk].redundancy if device.pk in power else None
+        if state is not None:
+            counts = tally.setdefault(device.rack_id, dict.fromkeys(REDUNDANCY_RACK_LABELS, 0))
+            counts[state] += 1
+
+    colours = {key: colour for key, colour, _ in REDUNDANCY}
+    values = {}
+    for rack_id, counts in tally.items():
+        total = sum(counts.values())
+        # The palette lists the states with the worst last.
+        worst = next(key for key, _, _ in reversed(REDUNDANCY) if counts[key])
+        parts = []
+        if counts['single']:
+            parts.append(f'{counts["single"]} of {total} devices on one feed')
+        if counts['untraced']:
+            parts.append(f'{counts["untraced"]} of {total} with no feed traced')
+        values[rack_id] = RackValue(
+            colour=colours[worst],
+            label=', '.join(parts) or f'{total} of {total} devices on two or more feeds',
+            value=counts['single'],
+        )
+    return values
+
+
 def role_overlay(racks: Sequence) -> dict[int, RackValue]:
     """
     The rack's own role colour, which is the one colouring an operator already knows.
@@ -606,6 +665,12 @@ BUILTIN_OVERLAYS = {
     ),
     'space': BuiltinColouring('Space', space_overlay, 'How much of each rack is filled.', UTILISATION_LEGEND),
     'role': BuiltinColouring('Role', role_overlay, 'The rack role, in its own colour.'),
+    'redundancy': BuiltinColouring(
+        'Redundancy',
+        redundancy_overlay,
+        'Whether a device in each rack depends on a single power feed.',
+        REDUNDANCY_LEGEND,
+    ),
 }
 
 # The floor's colourings. The functions below are the names other plugins register with.
