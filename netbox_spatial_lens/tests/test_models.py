@@ -25,6 +25,11 @@ class FloorTest(LensTestCase):
         floor = Floor.objects.create(name='Hall floor', location=location, width=1, depth=1)
         self.assertEqual(floor.effective_site, self.site)
 
+    def test_a_room_with_no_size_is_refused(self):
+        for width, depth in ((0, 5), (5, 0), (-3, 5)):
+            with self.subTest(width=width, depth=depth), self.assertRaises(ValidationError):
+                Floor(name='Flat', site=self.site, width=width, depth=depth).full_clean()
+
     def test_dimensions_convert_to_centimetres(self):
         metric = make_floor(self.site, width=10, depth=5)
         self.assertEqual((metric.width_cm, metric.depth_cm), (1000, 500))

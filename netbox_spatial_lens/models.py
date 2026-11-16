@@ -33,6 +33,12 @@ CM_PER_UNIT = {
 }
 
 
+# A room or an image with no size cannot be drawn: the plan's viewBox and every scale derived
+# from it divide by these.
+SMALLEST_ROOM = Decimal('0.01')
+SMALLEST_LAYER = Decimal('0.1')
+
+
 class Floor(PrimaryModel):
     """
     A room that racks stand in, bound to a site or to a location but never to both.
@@ -64,11 +70,13 @@ class Floor(PrimaryModel):
     width = models.DecimalField(
         max_digits=8,
         decimal_places=2,
+        validators=(MinValueValidator(SMALLEST_ROOM),),
         help_text='Room width, in the unit below.',
     )
     depth = models.DecimalField(
         max_digits=8,
         decimal_places=2,
+        validators=(MinValueValidator(SMALLEST_ROOM),),
         help_text='Room depth, in the unit below.',
     )
     unit = models.CharField(
@@ -333,9 +341,17 @@ class FloorLayer(NetBoxModel):
         default=0,
         help_text="Centimetres from the room's top edge to the image's top edge.",
     )
-    width = models.DecimalField(max_digits=8, decimal_places=1, help_text='How wide the image is, in room centimetres.')
+    width = models.DecimalField(
+        max_digits=8,
+        decimal_places=1,
+        validators=(MinValueValidator(SMALLEST_LAYER),),
+        help_text='How wide the image is, in room centimetres.',
+    )
     height = models.DecimalField(
-        max_digits=8, decimal_places=1, help_text='How tall the image is, in room centimetres.'
+        max_digits=8,
+        decimal_places=1,
+        validators=(MinValueValidator(SMALLEST_LAYER),),
+        help_text='How tall the image is, in room centimetres.',
     )
     rotation = models.DecimalField(
         max_digits=4,

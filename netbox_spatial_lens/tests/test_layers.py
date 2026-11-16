@@ -41,6 +41,14 @@ class FloorLayerTest(LensTestCase):
         with self.assertRaises(ValidationError):
             layer.clean()
 
+    def test_a_layer_with_no_size_is_refused(self):
+        for width, height in ((0, 100), (100, 0), (-50, 100)):
+            layer = FloorLayer(
+                floor=self.floor, name='Flat', external_url='https://example.invalid/p.png', width=width, height=height
+            )
+            with self.subTest(width=width, height=height), self.assertRaises(ValidationError):
+                layer.full_clean()
+
     def test_the_source_is_wherever_the_image_lives(self):
         self.assertEqual(self.layer().source, 'https://example.invalid/plan.png')
 
