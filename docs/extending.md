@@ -19,8 +19,9 @@ Each level has a registry of colourings. The buttons above each drawing list wha
 | Floor | `netbox_spatial_lens.overlays.register_overlay` | The racks on one floor, as `Rack` objects with role, location, tenant and tags loaded | `?overlay=` |
 | Rack view | `netbox_spatial_lens.device_overlays.register_device_overlay` | The mounted devices. Each has `.device` (with role, device type, tenant and tags loaded), `.port_count`, `.connected_count` and `.power` (`allocated_watts` and `maximum_watts`, or `None`). | `?colour=` |
 | World map | `netbox_spatial_lens.site_overlays.register_site_overlay` | The sites on the map, as `Site` objects with region, group and tenant loaded | `?overlay=` |
+| World map, circuits | `netbox_spatial_lens.circuit_overlays.register_circuit_overlay` | The circuits drawn on the map, as `Circuit` objects with provider, type and tenant loaded | `?circuits=` |
 
-All three take the same arguments: `register_…(name, label, fn, description='', legend=None)`.
+All four take the same arguments: `register_…(name, label, fn, description='', legend=None)`.
 
 - `name` goes in the URL, so keep it stable.
 - `label` is the button text, and `description` its tooltip.
@@ -45,7 +46,7 @@ The **No data** entry is always added last.
 
 ### Which colouring a page opens with
 
-The one named in the URL. If no colouring has that name, the default from the settings (`default_overlay`, `default_device_overlay` or `default_site_overlay`). If no colouring has that name either, the first one registered. A link to a colouring that no longer exists still opens the page.
+The one named in the URL. If no colouring has that name, the default from the settings (`default_overlay`, `default_device_overlay`, `default_site_overlay` or `default_circuit_overlay`). If no colouring has that name either, the first one registered. A link to a colouring that no longer exists still opens the page.
 
 ### Permissions
 
@@ -177,7 +178,7 @@ class YourPluginConfig(PluginConfig):
 config = YourPluginConfig
 ```
 
-List your plugin after `netbox_spatial_lens` in `PLUGINS`. A name registered twice keeps the later registration, so this order also lets you replace a built-in colouring by registering its name. To remove a built-in colouring instead, leave it out of `enable_builtin_overlays`, `enable_builtin_device_overlays` or `enable_builtin_site_overlays` (see [Configuration](configuration.md)).
+List your plugin after `netbox_spatial_lens` in `PLUGINS`. A name registered twice keeps the later registration, so this order also lets you replace a built-in colouring by registering its name. To remove a built-in colouring instead, leave it out of `enable_builtin_overlays`, `enable_builtin_device_overlays`, `enable_builtin_site_overlays` or `enable_builtin_circuit_overlays` (see [Configuration](configuration.md)).
 
 ## Filter by
 
@@ -208,7 +209,7 @@ The world map has no custom field filters.
 
 ## How colourings and filters combine
 
-A drawing has one colouring and several ways to narrow it: the legend, the **Tags** finder, a finder per custom field, and the find box. On the world map, the **Sites** and **Circuits** finders and the provider legend narrow it too.
+A drawing has one colouring and several ways to narrow it: the legend, the **Tags** finder, a finder per custom field, and the find box. On the world map, the **Sites** and **Circuits** finders and the circuit legend narrow it too.
 
 - In one legend or one finder, picks add up: tick two values and the items with either one stay lit.
 - Across them, picks narrow each other: an item stays lit only if it is kept by every legend, every finder and the find box.

@@ -19,8 +19,15 @@ rack, and one type means the no-data rule cannot be implemented three times and 
 
 from collections.abc import Sequence
 
-from netbox_spatial_lens.overlays import NO_DATA_COLOUR, BuiltinColouring, Colouring, RackValue, Registry
-from netbox_spatial_lens.palette import STATUS_COLOURS, distinct_colours
+from netbox_spatial_lens.overlays import (
+    NO_DATA_COLOUR,
+    BuiltinColouring,
+    Colouring,
+    RackValue,
+    Registry,
+    colour_by_related,
+)
+from netbox_spatial_lens.palette import STATUS_COLOURS
 
 __all__ = (
     'BUILTIN_SITE_OVERLAYS',
@@ -42,26 +49,6 @@ class SiteOverlay(Colouring):
     """
 
 
-def _by_related(sites: Sequence, attribute: str) -> dict[int, RackValue]:
-    """
-    Colour each site by the name of a related object, or leave it as no data.
-
-    The colours are chosen across the whole set rather than per site, which is the only place
-    the clash between two names hashing alike can be seen and settled.
-    """
-    sites = list(sites)
-    colours = distinct_colours(
-        related.name for site in sites if (related := getattr(site, attribute, None)) is not None
-    )
-    values = {}
-    for site in sites:
-        related = getattr(site, attribute, None)
-        if related is None:
-            continue
-        values[site.pk] = RackValue(colour=colours[related.name], label=related.name, value=related.name)
-    return values
-
-
 def group_overlay(sites: Sequence) -> dict[int, RackValue]:
     """
     The site group: how an estate is usually organised, and the map's default.
@@ -69,14 +56,14 @@ def group_overlay(sites: Sequence) -> dict[int, RackValue]:
     A map of two dozen identical dots throws that organisation away, and which of these is a
     branch and which is a data centre is exactly the question at this zoom.
     """
-    return _by_related(sites, 'group')
+    return colour_by_related(sites, 'group')
 
 
 def tenant_overlay(sites: Sequence) -> dict[int, RackValue]:
     """
     Who owns each site.
     """
-    return _by_related(sites, 'tenant')
+    return colour_by_related(sites, 'tenant')
 
 
 def region_overlay(sites: Sequence) -> dict[int, RackValue]:
@@ -87,7 +74,7 @@ def region_overlay(sites: Sequence) -> dict[int, RackValue]:
     filed it under, which is what an estate is actually run by and is not always what the
     coordinates suggest.
     """
-    return _by_related(sites, 'region')
+    return colour_by_related(sites, 'region')
 
 
 def status_overlay(sites: Sequence) -> dict[int, RackValue]:

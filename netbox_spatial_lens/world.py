@@ -16,9 +16,10 @@ from dcim.models import Device, Rack, Site
 from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
 
+from netbox_spatial_lens.circuit_overlays import resolve_circuit_overlay
 from netbox_spatial_lens.overlays import NO_DATA_COLOUR as NO_DATA
-from netbox_spatial_lens.overlays import NO_DATA_KEY, NO_DATA_LABEL, LegendEntry, Stat
-from netbox_spatial_lens.palette import NODE, distinct_colours
+from netbox_spatial_lens.overlays import NO_DATA_KEY, LegendEntry, Stat
+from netbox_spatial_lens.palette import NODE
 from netbox_spatial_lens.site_overlays import resolve_site_overlay
 
 __all__ = (
@@ -80,16 +81,11 @@ class WorldLink:
     z: WorldNode
     width: float
     label: str
-    # The provider's colour. A circuit is the one thing on this map that belongs to somebody
-    # outside the estate, and which of them a line belongs to is the question the drawing held
-    # the answer to and could not be asked.
+    # What the circuit colouring says of this circuit: its provider, unless the reader asked
+    # for another colouring.
     colour: str = NO_DATA
-
-    @property
-    def band(self) -> str:
-        """The provider legend band this circuit falls in: its provider's name."""
-        provider = getattr(self.circuit, 'provider', None)
-        return provider.name if provider else NO_DATA_KEY
+    # The band of the circuit legend this circuit falls in.
+    band: str = NO_DATA_KEY
 
 
 @dataclass
@@ -104,7 +100,7 @@ class WorldMap:
     stats: list = field(default_factory=list)
     # What the circuit colours mean. Its own legend rather than more bands in the site one:
     # a provider is not a kind of site, and the two narrow independently.
-    providers: list = field(default_factory=list)
+    circuit_legend: list = field(default_factory=list)
 
     @property
     def site_nodes(self) -> list[WorldNode]:
@@ -112,7 +108,13 @@ class WorldMap:
 
 
 def build_world(
-    sites_queryset=None, overlay=None, circuits=None, racks=None, devices=None, provider_networks=None
+    sites_queryset=None,
+    overlay=None,
+    circuits=None,
+    racks=None,
+    devices=None,
+    provider_networks=None,
+    circuit_overlay=None,
 ) -> WorldMap:
     """
     Every geocoded site, and the circuits joining them.
@@ -192,7 +194,8 @@ def build_world(
             facts=_site_facts(site, racks, device_counts.get(site.pk, 0), overlay, values.get(site.pk)),
         )
 
-    links = _build_links(nodes, circuits, provider_networks)
+    circuit_overlay = circuit_overlay or resolve_circuit_overlay(None)
+    links, circuit_values = _build_links(nodes, circuits, provider_networks, circuit_overlay)
     for link in links:
         link.a.link_count += 1
         link.z.link_count += 1
@@ -205,7 +208,9 @@ def build_world(
         ungeocoded=ungeocoded,
         legend=_world_legend(overlay, values, providers),
         stats=_world_stats(sites, sum(rack_counts.values()), sum(device_counts.values()), links, ungeocoded, providers),
-        providers=_provider_legend(links),
+        # Over the circuits drawn, not every circuit in the database: a legend on this map
+        # explains this map.
+        circuit_legend=circuit_overlay.legend_for(circuit_values.values()) if circuit_overlay and links else [],
     )
 
 
@@ -238,40 +243,6 @@ def _world_legend(overlay, values: Mapping, providers: int) -> list[LegendEntry]
     entries = overlay.legend_for(values.values()) if overlay else []
     if providers:
         entries.append(LegendEntry(PROVIDER_COLOUR, 'Provider network', providers, key=PROVIDER_KEY))
-    return entries
-
-
-def _provider_legend(links: Sequence) -> list[LegendEntry]:
-    """
-    What the circuit colours mean, and how many circuits each provider carries.
-
-    Counted over the circuits actually drawn rather than over every provider in the database:
-    a legend on this map explains this map, and a provider whose circuits both end somewhere
-    unplaced has no line here to explain.
-
-    A circuit with no provider recorded keeps the grey, is named and is counted, which is the
-    rule every other legend in the plugin follows.
-
-    The swatches are read off the lines rather than derived a second time. Deriving them again
-    means choosing colours over a different set of providers, and the clash-resolution in
-    `distinct_colours` gives a different answer for a different set: one undrawn circuit could
-    shift the colour of every provider after it, and the legend would name a colour nothing on
-    the map wore. Reading the drawn lines cannot drift from them.
-    """
-    if not links:
-        return []
-
-    counts: dict[str, int] = {}
-    colours: dict[str, str] = {}
-    for link in links:
-        provider = getattr(link.circuit, 'provider', None)
-        name = provider.name if provider else ''
-        counts[name] = counts.get(name, 0) + 1
-        if name:
-            colours[name] = link.colour
-
-    entries = [LegendEntry(colours[name], name, counts[name], key=name) for name in sorted(colours)]
-    entries.append(LegendEntry(NO_DATA, NO_DATA_LABEL, counts.get('', 0), key=NO_DATA_KEY))
     return entries
 
 
@@ -390,9 +361,10 @@ def _endpoint_key(termination) -> tuple[str | None, str | None, str | None]:
     return None, None, None
 
 
-def _build_links(nodes: dict, circuits=None, provider_networks=None) -> list[WorldLink]:
+def _build_links(nodes: dict, circuits=None, provider_networks=None, overlay=None) -> tuple[list[WorldLink], dict]:
     """
-    Circuits with both ends resolvable, drawn between their endpoints.
+    Circuits with both ends resolvable, drawn between their endpoints, and what `overlay` says
+    of each, by circuit id.
 
     A provider network is given a position of its own: the centre of the sites reaching it.
     That places an MPLS cloud in the middle of the estate that uses it, which is where a
@@ -402,7 +374,7 @@ def _build_links(nodes: dict, circuits=None, provider_networks=None) -> list[Wor
     # Left to attribute access, `termination._site` was a query per termination, which on an
     # estate of any size is the whole cost of this view.
     base = Circuit.objects.all() if circuits is None else circuits
-    circuits = base.select_related('provider', 'type').prefetch_related(
+    circuits = base.select_related('provider', 'type', 'tenant').prefetch_related(
         Prefetch(
             'terminations',
             queryset=CircuitTermination.objects.select_related('_site', '_provider_network'),
@@ -464,26 +436,30 @@ def _build_links(nodes: dict, circuits=None, provider_networks=None) -> list[Wor
             lon=sum(n.lon for n in sited) / len(sited),
         )
 
-    # Chosen across the whole set, which is the only place two provider names hashing onto one
-    # colour can be seen and settled.
-    colours = distinct_colours(circuit.provider.name for circuit, _, _ in pending if getattr(circuit, 'provider', None))
+    # Coloured over the circuits drawn and no others, so the legend cannot name a colour that
+    # nothing on the map wears.
+    drawn = [(circuit, a_key, z_key) for circuit, a_key, z_key in pending if a_key in nodes and z_key in nodes]
+    values = overlay.evaluate([circuit for circuit, _, _ in drawn]) if overlay else {}
 
     links = []
-    for circuit, a_key, z_key in pending:
-        if a_key not in nodes or z_key not in nodes:
-            continue
-        provider = getattr(circuit, 'provider', None)
+    for circuit, a_key, z_key in drawn:
+        value = values.get(circuit.pk)
+        label = f'{circuit.cid} · {circuit.provider}'
+        # The reading of the colouring, unless the label already says it.
+        if value is not None and value.has_data and value.label != str(circuit.provider):
+            label = f'{label} · {value.label}'
         links.append(
             WorldLink(
                 circuit=circuit,
                 a=nodes[a_key],
                 z=nodes[z_key],
                 width=_link_width(circuit),
-                label=f'{circuit.cid} · {circuit.provider}',
-                colour=colours[provider.name] if provider else NO_DATA,
+                label=label,
+                colour=value.colour if value is not None else NO_DATA,
+                band=overlay.band_of(value) if value is not None else NO_DATA_KEY,
             )
         )
-    return links
+    return links, values
 
 
 def _link_width(circuit) -> float:

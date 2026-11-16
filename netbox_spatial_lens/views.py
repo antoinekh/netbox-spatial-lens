@@ -22,6 +22,7 @@ from utilities.views import ViewTab, register_model_view
 
 from netbox_spatial_lens import filtersets, forms, tables
 from netbox_spatial_lens.cabling import kind_legend
+from netbox_spatial_lens.circuit_overlays import get_circuit_overlays, resolve_circuit_overlay
 from netbox_spatial_lens.device_overlays import get_device_overlays, resolve_device_overlay
 from netbox_spatial_lens.elevation import build_elevation, rack_summary
 from netbox_spatial_lens.field_filters import cells_for, field_filters
@@ -438,9 +439,11 @@ class WorldView(generic.ObjectListView):
         # later release removed should still open the map, which is how the floor behaves too.
         # Resolved once, here, so the map and the toolbar name the same colouring.
         overlay = resolve_site_overlay(request.GET.get('overlay'))
+        circuit_overlay = resolve_circuit_overlay(request.GET.get('circuits'))
         world = build_world(
             self.queryset,
             overlay=overlay,
+            circuit_overlay=circuit_overlay,
             # Restricted like the sites are: the map must not become a way to read circuits a
             # user may not open anywhere else in NetBox.
             circuits=Circuit.objects.restrict(request.user, 'view'),
@@ -477,6 +480,8 @@ class WorldView(generic.ObjectListView):
                 'model': Site,
                 'overlay': overlay,
                 'overlays': get_site_overlays(),
+                'circuit_overlay': circuit_overlay,
+                'circuit_overlays': get_circuit_overlays(),
                 # Handed to the page as data rather than baked into the script, so a
                 # deployment can point at its own tile server or its own copy of MapLibre.
                 #

@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from django.utils.text import slugify
 from netbox.plugins import get_plugin_config
 
-from netbox_spatial_lens.palette import COOLING, NO_DATA, UTILISATION, utilisation_colour
+from netbox_spatial_lens.palette import COOLING, NO_DATA, UTILISATION, distinct_colours, utilisation_colour
 
 __all__ = (
     'BUILTIN_OVERLAYS',
@@ -40,6 +40,7 @@ __all__ = (
     'Stat',
     'band_key',
     'build_legend',
+    'colour_by_related',
     'declared_key',
     'floor_power_utilisation',
     'floor_space_utilisation',
@@ -225,6 +226,26 @@ def build_legend(declared: Sequence[LegendEntry], values: Iterable[RackValue]) -
         entries = [LegendEntry(colours[label], label, tally[label], key=label) for label in sorted(colours)]
 
     return [*entries, LegendEntry(NO_DATA_COLOUR, NO_DATA_LABEL, tally.get(NO_DATA_KEY, 0), key=NO_DATA_KEY)]
+
+
+def colour_by_related(items: Sequence, attribute: str) -> dict[int, RackValue]:
+    """
+    Colour each item by the name of a related object, or leave it as no data.
+
+    The colours are chosen across the whole set rather than per item, which is the only place
+    the clash between two names hashing alike can be seen and settled.
+    """
+    items = list(items)
+    colours = distinct_colours(
+        related.name for item in items if (related := getattr(item, attribute, None)) is not None
+    )
+    values = {}
+    for item in items:
+        related = getattr(item, attribute, None)
+        if related is None:
+            continue
+        values[item.pk] = RackValue(colour=colours[related.name], label=related.name, value=related.name)
+    return values
 
 
 def resolve_colouring(colourings: Sequence[Colouring], name: str | None, default: str | None) -> Colouring | None:

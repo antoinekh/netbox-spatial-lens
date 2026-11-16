@@ -6,6 +6,7 @@
 
 - **Background layers:** the layout editor has a Background layers panel to show or hide a layer, change its order and its opacity, and calibrate it. Calibrate lets you drag the layer, pull a corner to resize it at the proportions of the image, type a rotation, and use Set scale: click two points and give the real distance between them. The changes share Undo, Redo and Save with the racks.
 - **Background layers:** the layer form accepts a PDF. The browser converts its first page to a PNG with pdf.js before the upload, so the server still stores images only. The new `pdfjs_base` setting says where pdf.js loads from; empty turns the conversion off. The API and the import still take images only.
+- **World map:** the circuits have their own colouring, as the sites do: provider, type, status or tenant. The circuit legend follows it and filters by it, and the hover card of a circuit names the reading. The URL keeps it as `?circuits=`. The new settings `enable_builtin_circuit_overlays` and `default_circuit_overlay` choose what is offered, and another plugin can add a colouring with `register_circuit_overlay`.
 - **Image export:** a button on the floor, the rack and the world map downloads the drawing as a PNG, with a title, the date and the legends. The image shows what is on screen: the camera, the zoom, the filters and the picked bands. A background layer that the browser cannot read is left out, and the image says so.
 
 ## v0.5.0 (2026-11-16)

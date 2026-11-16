@@ -67,6 +67,11 @@
   flex-wrap: wrap;
 }
 
+.lens-toolbar__label {
+  font-size: .875rem;
+  color: var(--lens-muted);
+}
+
 .lens-toolbar__spacer {
   flex: 1 1 auto;
 }

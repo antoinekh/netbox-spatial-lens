@@ -722,11 +722,55 @@ class WorldCircuitTest(LensTestCase):
         link = build_world().links[0]
         self.assertEqual(link.colour, distinct_colours(['Level 3'])['Level 3'])
 
+    def test_a_circuit_coloured_by_status_falls_in_the_band_of_its_status(self):
+        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
+
+        live = self.circuit('CID-1', 'Level 3')
+        planned = self.circuit('CID-2', 'Level 3')
+        planned.status = 'planned'
+        planned.save()
+        world = build_world(circuit_overlay=get_circuit_overlay('status'))
+        bands = {link.circuit.cid: link.band for link in world.links}
+        self.assertEqual(bands, {'CID-1': live.get_status_display(), 'CID-2': 'Planned'})
+        self.assertEqual({e.label: e.count for e in world.circuit_legend if e.count}, {'Active': 1, 'Planned': 1})
+
+    def test_a_circuit_coloured_by_type_wears_the_colour_of_its_type(self):
+        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
+
+        circuit = self.circuit('CID-1', 'Level 3')
+        circuit.type.color = 'ff0000'
+        circuit.type.save()
+        link = build_world(circuit_overlay=get_circuit_overlay('type')).links[0]
+        self.assertEqual(link.colour, '#ff0000')
+        # The hover card names the reading, which the label does not already say.
+        self.assertEqual(link.label, 'CID-1 · Level 3 · Transit')
+
+    def test_a_circuit_with_no_tenant_is_no_data_by_tenant(self):
+        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
+
+        self.circuit('CID-1', 'Level 3')
+        world = build_world(circuit_overlay=get_circuit_overlay('tenant'))
+        self.assertEqual(world.links[0].colour, NO_DATA)
+        self.assertEqual(world.links[0].band, 'lens:no-data')
+
+    def test_the_page_offers_every_circuit_colouring_and_keeps_the_site_one(self):
+        self.circuit('CID-1', 'Level 3')
+        user = create_test_user()
+        user.is_superuser = True
+        user.save()
+        self.client.force_login(user)
+        url = reverse('plugins:netbox_spatial_lens:world')
+        response = self.client.get(url, {'overlay': 'status', 'circuits': 'type'})
+        self.assertContains(response, 'Circuits by type')
+        for name in ('provider', 'type', 'status', 'tenant'):
+            self.assertContains(response, f'?overlay=status&amp;circuits={name}')
+        self.assertContains(response, '?overlay=group&amp;circuits=type')
+
     def test_two_providers_are_two_bands(self):
         self.circuit('CID-1', 'Level 3')
         self.circuit('CID-2', 'CenturyLink')
         world = build_world()
-        named = [e for e in world.providers if e.count]
+        named = [e for e in world.circuit_legend if e.count]
         self.assertEqual(len(named), 2)
         self.assertEqual(len({e.colour for e in named}), 2)
 
@@ -742,7 +786,7 @@ class WorldCircuitTest(LensTestCase):
             self.circuit('CID-2', None)
 
         world = build_world()
-        grey = next(e for e in world.providers if e.label == 'No data')
+        grey = next(e for e in world.circuit_legend if e.label == 'No data')
         self.assertEqual(grey.count, 0)
         self.assertEqual(grey.colour, NO_DATA)
 
@@ -751,7 +795,7 @@ class WorldCircuitTest(LensTestCase):
         self.circuit('CID-2', 'Level 3')
         self.circuit('CID-3', 'CenturyLink')
         world = build_world()
-        self.assertEqual(sum(e.count for e in world.providers), len(world.links))
+        self.assertEqual(sum(e.count for e in world.circuit_legend), len(world.links))
 
     def test_the_legend_swatch_matches_the_line_it_explains(self):
         # The colours were chosen twice, once over every circuit and once over the drawn ones,
@@ -772,7 +816,7 @@ class WorldCircuitTest(LensTestCase):
 
         world = build_world()
         drawn_colours = {link.circuit.provider.name: link.colour for link in world.links}
-        for entry in world.providers:
+        for entry in world.circuit_legend:
             if entry.label in drawn_colours:
                 self.assertEqual(entry.colour, drawn_colours[entry.label], f'{entry.label} swatch')
         self.assertIn(drawn.provider.name, drawn_colours)
@@ -788,7 +832,7 @@ class WorldCircuitTest(LensTestCase):
 
         none = Circuit.objects.none()
         self.assertEqual(build_world(circuits=none).links, [])
-        self.assertEqual(build_world(circuits=none).providers, [])
+        self.assertEqual(build_world(circuits=none).circuit_legend, [])
 
     def test_a_provider_network_the_reader_may_not_see_is_not_on_the_map(self):
         from circuits.models import CircuitTermination, ProviderNetwork
@@ -805,14 +849,14 @@ class WorldCircuitTest(LensTestCase):
         self.assertEqual(world.links, [])
 
     def test_an_estate_with_no_circuits_has_no_provider_legend(self):
-        self.assertEqual(build_world().providers, [])
+        self.assertEqual(build_world().circuit_legend, [])
 
     def test_the_two_legends_are_separate_groups(self):
         # Picking a provider must not disturb the site colouring, and the other way round. They
         # answer different questions and the page holds both at once.
         self.circuit('CID-1', 'Level 3')
         world = build_world()
-        self.assertNotEqual(world.legend, world.providers)
+        self.assertNotEqual(world.legend, world.circuit_legend)
 
 
 class WorldStatsTest(TestCase):

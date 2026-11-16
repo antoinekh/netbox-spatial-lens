@@ -37,7 +37,7 @@ https://github.com/user-attachments/assets/15360e00-abfa-40f1-a338-959fd32c0023
 
 ### The world map
 
-Sites on a globe, sized by rack count and coloured by **group**, **status**, **tenant** or **region**, with the circuits between them coloured by **provider**. The two legends and the **Sites** and **Circuits** finders narrow the map. It needs WebGL and MapLibre, which loads from a CDN by default or from your own copy; tiles are optional.
+Sites on a globe, sized by rack count and coloured by **group**, **status**, **tenant** or **region**, with the circuits between them coloured by **provider**, **type**, **status** or **tenant**. The two legends and the **Sites** and **Circuits** finders narrow the map. It needs WebGL and MapLibre, which loads from a CDN by default or from your own copy; tiles are optional.
 
 ![A globe with sites in North America and Europe, circuits drawn as great circles across the Atlantic, and two legends naming the site groups and the circuit providers](docs/images/world.png)
 

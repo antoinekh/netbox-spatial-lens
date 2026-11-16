@@ -31,14 +31,31 @@
           map is also its filter, so the colouring decides what a reader can narrow to: with
           only site group to colour by, "show me everything still planned" could not be asked.
           {% endcomment %}
-          <div class="btn-group btn-group-sm" role="group" aria-label="Colour the sites by">
+          <span class="lens-toolbar__label" id="lens-colour-sites">Sites</span>
+          <div class="btn-group btn-group-sm" role="group" aria-labelledby="lens-colour-sites">
             {% for o in overlays %}
-              <a href="?overlay={{ o.name }}"
+              <a href="?overlay={{ o.name }}{% if circuit_overlay %}&amp;circuits={{ circuit_overlay.name }}{% endif %}"
                  class="btn btn-outline-primary{% if overlay and o.name == overlay.name %} active{% endif %}"
                  {% if overlay and o.name == overlay.name %}aria-current="true"{% endif %}
                  title="{{ o.description }}">{{ o.label }}</a>
             {% endfor %}
           </div>
+          {% comment %}
+          A second colouring, for the lines: whose a circuit is, what it is for and whether it
+          is live are questions about the circuits, not about the sites they join. Named, because
+          two rows of buttons side by side do not say which of them colours what.
+          {% endcomment %}
+          {% if circuit_overlays and world.links %}
+            <span class="lens-toolbar__label" id="lens-colour-circuits">Circuits</span>
+            <div class="btn-group btn-group-sm" role="group" aria-labelledby="lens-colour-circuits">
+              {% for o in circuit_overlays %}
+                <a href="?{% if overlay %}overlay={{ overlay.name }}&amp;{% endif %}circuits={{ o.name }}"
+                   class="btn btn-outline-primary{% if o.name == circuit_overlay.name %} active{% endif %}"
+                   {% if o.name == circuit_overlay.name %}aria-current="true"{% endif %}
+                   title="{{ o.description }}">{{ o.label }}</a>
+              {% endfor %}
+            </div>
+          {% endif %}
           <span class="lens-toolbar__spacer"></span>
           {% comment %}
           The lists hang under their own buttons rather than beside the map or below it.
@@ -91,10 +108,10 @@
                 <h3 class="lens-map-legend__title">Sites{% if overlay %} by {{ overlay.label|lower }}{% endif %}</h3>
                 {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.legend filter='sites' %}
               </div>
-              {% if world.providers %}
+              {% if world.circuit_legend %}
                 <div class="lens-map-legend">
-                  <h3 class="lens-map-legend__title">Circuits by provider</h3>
-                  {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.providers filter='circuits' %}
+                  <h3 class="lens-map-legend__title">Circuits by {{ circuit_overlay.label|lower }}</h3>
+                  {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.circuit_legend filter='circuits' %}
                 </div>
               {% endif %}
             </div>

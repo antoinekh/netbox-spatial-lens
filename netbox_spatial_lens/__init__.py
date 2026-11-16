@@ -39,6 +39,11 @@ class SpatialLensConfig(PluginConfig):
         'enable_builtin_site_overlays': True,
         # Colouring selected when the map is opened without one named.
         'default_site_overlay': 'group',
+        # Which built-in circuit colourings the world map offers. True for all, False for none,
+        # or a list from 'provider', 'type', 'status' and 'tenant'.
+        'enable_builtin_circuit_overlays': True,
+        # Circuit colouring selected when the map is opened without one named.
+        'default_circuit_overlay': 'provider',
         # Tiles for the world map. OpenStreetMap's own tiles are the default because they
         # need no API key; CARTO's basemaps now watermark every tile without one. Point this
         # at your own tile server, or set it to None, on a site with no egress. Without tiles
@@ -79,13 +84,14 @@ class SpatialLensConfig(PluginConfig):
         super().ready()
 
         from . import (
+            circuit_overlays,
             device_overlays,
             overlays,
             signals,  # noqa: F401  (connects the receivers)
             site_overlays,
         )
 
-        for level in (overlays, device_overlays, site_overlays):
+        for level in (overlays, device_overlays, site_overlays, circuit_overlays):
             level.registry.register_configured_builtins()
 
 
