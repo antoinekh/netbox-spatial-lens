@@ -174,10 +174,12 @@ re-parses the page.
         {% endcomment %}
         <text class="lens-rack-label" x="0" y="{% if p.fraction != None %}-{{ p.label_size|num }}{% else %}0{% endif %}"
               style="font-size: {{ p.label_size|num }}px;"
+              {% if p.label_turn %}transform="rotate({{ p.label_turn }})"{% endif %}
               dominant-baseline="middle" text-anchor="middle">{{ p.display_name|default:p.rack.name }}</text>
         {% if p.fraction != None %}
           <text class="lens-rack-value" x="0" y="{{ p.label_size|num }}"
                 style="font-size: {{ p.label_size|num }}px;"
+                {% if p.label_turn %}transform="rotate({{ p.label_turn }})"{% endif %}
                 dominant-baseline="middle" text-anchor="middle">{{ p.gauge_label }}</text>
           {% endif %}
       </g>

@@ -55,6 +55,12 @@
     const y = parseFloat(node.dataset.y);
     const rotation = parseFloat(node.dataset.rotation);
     node.setAttribute('transform', `translate(${x} ${y}) rotate(${rotation})`);
+    // The text turns with the rack, so a rack that faces down the plan gets its text turned back.
+    const upsideDown = rotation > 90 && rotation <= 270;
+    node.querySelectorAll('text').forEach(function (text) {
+      if (upsideDown) text.setAttribute('transform', 'rotate(180)');
+      else text.removeAttribute('transform');
+    });
   }
 
   function markDirty(node, intent) {

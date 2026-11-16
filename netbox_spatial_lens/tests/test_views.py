@@ -99,6 +99,15 @@ class FloorViewTest(ViewTestCase):
         response = self.client.get(self.floor.get_absolute_url())
         self.assertEqual(response.context['unplaced_count'], 1)
 
+    def test_a_rack_that_faces_down_the_plan_keeps_its_name_upright(self):
+        from netbox_spatial_lens.models import RackPlacement
+
+        response = self.client.get(self.floor.get_absolute_url())
+        self.assertNotContains(response, 'transform="rotate(180)"')
+        RackPlacement.objects.update(rotation=180)
+        response = self.client.get(self.floor.get_absolute_url())
+        self.assertContains(response, 'transform="rotate(180)"')
+
     def test_a_rack_links_inward_to_its_lens_tab(self):
         response = self.client.get(self.floor.get_absolute_url())
         self.assertContains(response, f'/dcim/racks/{self.rack.pk}/spatial-lens/')

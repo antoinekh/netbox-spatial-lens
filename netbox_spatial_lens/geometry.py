@@ -120,6 +120,14 @@ class PlacedRack:
             return None
 
     @property
+    def label_turn(self) -> int:
+        """
+        Degrees to turn the rack's text within its own group, so that it reads upright: the
+        text turns with the rack, and a rack that faces down the plan would carry it upside down.
+        """
+        return 180 if 90 < self.rotation <= 270 else 0
+
+    @property
     def gauge_label(self) -> str:
         """
         The number under the rack's name: short enough to fit a cabinet, unlike the legend's
