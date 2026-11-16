@@ -5,7 +5,7 @@ Named by both ends and by the port at each, because "which of these is xe-0/0/3"
 question as "which of these reaches R308".
 {% endcomment %}
 <div class="lens-finder__row" data-lens-pick="{{ row.cable.pk }}"
-     data-lens-name="{{ row.local_device }} {{ row.local_name }} {{ row.peer_name }} {{ row.peer_rack }}"
+     data-lens-name="{{ row.local_device }} {{ row.local_name }} {{ row.peer_name }} {{ row.peer_rack }} {{ row.kind_label }}"
      data-lens-filterable="cables" data-band="{{ row.kind }}" tabindex="0" role="checkbox"
      aria-checked="false">
   <span class="lens-finder__tick" aria-hidden="true"></span>

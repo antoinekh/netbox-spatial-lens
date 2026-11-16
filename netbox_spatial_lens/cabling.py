@@ -177,6 +177,10 @@ class CableRun:
     # name would otherwise be repeated on every row.
     peer_port_name: str = ''
 
+    @property
+    def kind_label(self) -> str:
+        return KIND_LABELS[self.kind]
+
 
 # Kept as a name for what the drawing needs; the values live in the palette.
 CABLE_KIND_COLOURS = KIND
