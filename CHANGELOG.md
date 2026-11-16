@@ -31,6 +31,7 @@
 - **Legends:** a picked band no longer has a blue bar on its left edge; the darker row and the bold text mark it.
 - **Filtered state:** what a legend band, the find box or a finder leaves out is dimmed less (35 % on the plans and the map, 30 % for cabinets in 3D), so the room keeps its shape. A finder lists only the rows the legend leaves in and says how many. The world map moves to the sites of the picked bands, and back to the estate when the band is cleared.
 - **Cable runs:** with Cable runs on, the runs between racks rest faint and the runs of the rack under the pointer are drawn in full, on the 2D plan and in 3D. The hover card of a rack says what it is cabled to, for example "12 cables to 2 racks, 3 off the floor".
+- **Layout editor:** Undo and Redo (buttons, Ctrl + Z and Ctrl + Shift + Z) for every move, rotation, placement and removal until Save. The toolbar shows the position and the rotation of the selected rack. The arrow keys move the selected rack by one grid step, or by one centimetre with Shift.
 - **Fixed:** the floor plan, the layout editor and the port allocation bars are drawn correctly for a reader whose language writes a comma for the decimal mark (French, German). The numbers in the SVG were written with the comma, so the racks were drawn at wrong positions.
 
 ## v0.4.0 (2026-09-22)

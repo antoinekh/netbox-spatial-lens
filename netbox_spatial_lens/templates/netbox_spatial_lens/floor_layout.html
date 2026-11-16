@@ -16,6 +16,14 @@
 
         <div class="lens-toolbar">
           {% include 'netbox_spatial_lens/inc/levels.html' with site=object.effective_site floor=object %}
+          <div class="btn-group btn-group-sm" role="group" aria-label="History">
+            <button type="button" class="btn btn-outline-secondary" data-lens-undo disabled title="Undo (Ctrl + Z)">
+              <i class="mdi mdi-undo" aria-hidden="true"></i> Undo
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-lens-redo disabled title="Redo (Ctrl + Shift + Z)">
+              <i class="mdi mdi-redo" aria-hidden="true"></i> Redo
+            </button>
+          </div>
           <button type="button" class="btn btn-sm btn-outline-secondary" data-lens-rotate="-90" disabled>
             <i class="mdi mdi-rotate-left"></i> Rotate left
           </button>
@@ -25,9 +33,10 @@
           <button type="button" class="btn btn-sm btn-outline-danger" data-lens-remove disabled>
             <i class="mdi mdi-close"></i> Remove
           </button>
+          <span class="lens-editor-position text-muted" data-lens-position></span>
           <span class="lens-toolbar__spacer"></span>
           <span class="lens-editor-status text-muted" data-lens-status></span>
-          {% include 'netbox_spatial_lens/inc/help.html' with text='Drag a rack to move it. Click a rack to select it, then rotate or remove it. Pick a rack under Not yet placed, then click the floor to put it down. Ctrl + wheel zooms; drag the floor to move it when zoomed. Nothing is written until Save.' %}
+          {% include 'netbox_spatial_lens/inc/help.html' with text='Drag a rack to move it. Click a rack to select it, then rotate or remove it, or move it with the arrow keys: one grid step, or one centimetre with Shift. Pick a rack under Not yet placed, then click the floor to put it down. Ctrl + Z undoes and Ctrl + Shift + Z redoes, until Save. Ctrl + wheel zooms; drag the floor to move it when zoomed. Nothing is written until Save.' %}
           <button type="button" class="btn btn-sm btn-primary" data-lens-save disabled>
             <i class="mdi mdi-content-save"></i> Save
           </button>

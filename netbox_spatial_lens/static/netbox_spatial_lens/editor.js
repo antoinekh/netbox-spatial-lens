@@ -33,6 +33,95 @@
   let selected = null;
   let pendingRack = null; // a rack chosen from the unplaced panel, waiting for a click
 
+  const racksLayer = svg.querySelector('.lens-racks');
+  const position = document.querySelector('[data-lens-position]');
+  const undoButton = document.querySelector('[data-lens-undo]');
+  const redoButton = document.querySelector('[data-lens-redo]');
+
+  // Every rack drawn and every panel row made in this session, by rack id, on the page or off
+  // it: undo puts back the element that was taken away, not a copy of it.
+  const rackNodes = new Map();
+  svg.querySelectorAll('.lens-rack').forEach((node) => rackNodes.set(node.dataset.rackId, node));
+  const panelItems = new Map();
+  unplacedPanel.querySelectorAll('[data-lens-rack]').forEach((item) => panelItems.set(item.dataset.lensRack, item));
+
+  /* ----------------------------------------------------------------------
+   * Undo and redo
+   *
+   * A step is the whole layout as it stood before a change: where every rack on the floor is, and
+   * what is waiting to be saved. Whole states rather than inverse operations, because a removal,
+   * a placement and a move each touch the floor, the panel and the pending set, and one restore
+   * that sets all three cannot leave them disagreeing. Saving empties both stacks: what is on
+   * the server cannot be undone from here.
+   * ------------------------------------------------------------------- */
+
+  const undone = [];
+  const redone = [];
+  // The rack and the time of the last arrow-key move, so a run of presses is one step.
+  let lastNudge = { id: null, at: 0 };
+
+  function snapshot() {
+    const placed = new Map();
+    svg.querySelectorAll('.lens-rack').forEach(function (node) {
+      placed.set(node.dataset.rackId, { x: node.dataset.x, y: node.dataset.y, rotation: node.dataset.rotation });
+    });
+    return { placed: placed, pending: new Map(pending) };
+  }
+
+  function restore(state) {
+    rackNodes.forEach(function (node, rackId) {
+      const at = state.placed.get(rackId);
+      const item = panelItems.get(rackId);
+      if (at) {
+        Object.assign(node.dataset, at);
+        applyTransform(node);
+        if (!node.isConnected) racksLayer.appendChild(node);
+        if (item) item.remove();
+      } else {
+        node.remove();
+        if (item && !item.isConnected) unplacedPanel.prepend(item);
+      }
+      node.classList.toggle('is-dirty', state.pending.has(rackId));
+    });
+    pending.clear();
+    state.pending.forEach((intent, rackId) => pending.set(rackId, intent));
+    pendingRack = null;
+    unplacedPanel.querySelectorAll('.is-selected').forEach((node) => node.classList.remove('is-selected'));
+    if (selected && !selected.isConnected) select(null);
+    refreshControls();
+  }
+
+  // Called before every change, so the state it leaves behind is the one undo returns to.
+  function checkpoint() {
+    undone.push(snapshot());
+    redone.length = 0;
+    lastNudge = { id: null, at: 0 };
+  }
+
+  function undo() {
+    if (!undone.length) return;
+    redone.push(snapshot());
+    restore(undone.pop());
+  }
+
+  function redo() {
+    if (!redone.length) return;
+    undone.push(snapshot());
+    restore(redone.pop());
+  }
+
+  /* Where the selected rack stands, in the numbers the placement stores. */
+  function showPosition() {
+    if (!position) return;
+    if (!selected) {
+      position.textContent = '';
+      return;
+    }
+    const data = selected.dataset;
+    const cm = (value) => String(Math.round(parseFloat(value) * 10) / 10);
+    position.textContent = `${data.name || ''} · x ${cm(data.x)} cm · y ${cm(data.y)} cm · ${cm(data.rotation)}°`;
+  }
+
   function snap(value) {
     return grid > 0 ? Math.round(value / grid) * grid : Math.round(value * 10) / 10;
   }
@@ -88,6 +177,9 @@
     removeButton.disabled = !removable;
     rotateButtons.forEach((b) => { b.disabled = !hasSelection; });
     saveButton.disabled = pending.size === 0;
+    if (undoButton) undoButton.disabled = undone.length === 0;
+    if (redoButton) redoButton.disabled = redone.length === 0;
+    showPosition();
     status.textContent = pending.size
       ? `${pending.size} unsaved change${pending.size === 1 ? '' : 's'}`
       : '';
@@ -126,10 +218,12 @@
     const halfW = parseFloat(node.dataset.width) / 2;
     const halfD = parseFloat(node.dataset.depth) / 2;
 
+    if (!drag.moved) checkpoint();
     node.dataset.x = clamp(snap(point.x - drag.offsetX), halfW, floorWidth);
     node.dataset.y = clamp(snap(point.y - drag.offsetY), halfD, floorDepth);
     applyTransform(node);
     drag.moved = true;
+    showPosition();
   });
 
   function endDrag(event) {
@@ -151,6 +245,7 @@
     button.addEventListener('click', function () {
       if (!selected) return;
       const by = parseFloat(button.dataset.lensRotate);
+      checkpoint();
       // Kept in [0, 360) because the model validates that range.
       const next = (parseFloat(selected.dataset.rotation) + by + 360) % 360;
       selected.dataset.rotation = next;
@@ -163,6 +258,7 @@
     if (!selected || removeButton.disabled) return;
     const node = selected;
     const rackId = node.dataset.rackId;
+    checkpoint();
 
     if (pending.get(rackId) === 'create') {
       // Never saved, so there is nothing on the server to delete.
@@ -173,18 +269,21 @@
     // The drawn label may be trimmed to fit its cabinet, so the name comes from the data
     // attribute that carries it whole; otherwise a rack put back on the panel keeps the
     // ellipsis, and is placed again under a name that is not its own.
-    returnToUnplaced(
-      rackId,
-      node.dataset.name || node.querySelector('.lens-rack-label').textContent,
-      node.dataset.width,
-      node.dataset.depth
+    unplacedPanel.prepend(
+      panelItems.get(rackId) ||
+        unplacedItem(
+          rackId,
+          node.dataset.name || node.querySelector('.lens-rack-label').textContent,
+          node.dataset.width,
+          node.dataset.depth
+        )
     );
     node.remove();
     select(null);
     refreshControls();
   });
 
-  function returnToUnplaced(rackId, name, width, depth) {
+  function unplacedItem(rackId, name, width, depth) {
     const item = document.createElement('div');
     item.className = 'lens-unplaced__item';
     item.dataset.lensRack = rackId;
@@ -196,7 +295,8 @@
     const label = document.createElement('span');
     label.textContent = name;
     item.appendChild(label);
-    unplacedPanel.prepend(item);
+    panelItems.set(rackId, item);
+    return item;
   }
 
   unplacedPanel.addEventListener('click', function (event) {
@@ -224,12 +324,29 @@
     const point = toRoom(event);
     const width = parseFloat(pendingRack.node.dataset.width);
     const depth = parseFloat(pendingRack.node.dataset.depth);
-    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    group.setAttribute('class', 'lens-rack is-dirty');
-    group.dataset.rackId = pendingRack.id;
+    checkpoint();
+    // A rack that stood on the floor earlier in this session goes back as the element it was.
+    const group = rackNodes.get(pendingRack.id) || newRackNode(pendingRack.id, pendingRack.name, width, depth);
+    group.classList.add('is-dirty');
     group.dataset.x = clamp(snap(point.x), width / 2, floorWidth);
     group.dataset.y = clamp(snap(point.y), depth / 2, floorDepth);
     group.dataset.rotation = 0;
+    applyTransform(group);
+    racksLayer.appendChild(group);
+
+    // A rack taken off the floor in this session still has its placement on the server until
+    // Save, so putting it back down moves that placement rather than creating a second one.
+    pending.set(pendingRack.id, pending.get(pendingRack.id) === 'delete' ? 'update' : 'create');
+    pendingRack.node.remove();
+    pendingRack = null;
+    select(group);
+  }
+
+  function newRackNode(rackId, name, width, depth) {
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    group.setAttribute('class', 'lens-rack');
+    group.dataset.rackId = rackId;
+    group.dataset.name = name;
     group.dataset.width = width;
     group.dataset.depth = depth;
     /* Built as nodes rather than as markup, so the name goes in as text.
@@ -273,18 +390,57 @@
     // The size every other name on this plan is drawn at, so the new rack matches its neighbours.
     const sibling = svg.querySelector('.lens-rack-label');
     if (sibling && sibling.style.fontSize) label.style.fontSize = sibling.style.fontSize;
-    label.textContent = pendingRack.name;
+    label.textContent = name;
     group.appendChild(label);
-    applyTransform(group);
-    svg.querySelector('.lens-racks').appendChild(group);
-
-    // A rack taken off the floor in this session still has its placement on the server until
-    // Save, so putting it back down moves that placement rather than creating a second one.
-    pending.set(pendingRack.id, pending.get(pendingRack.id) === 'delete' ? 'update' : 'create');
-    pendingRack.node.remove();
-    pendingRack = null;
-    select(group);
+    rackNodes.set(rackId, group);
+    return group;
   }
+
+  /* ----------------------------------------------------------------------
+   * The keyboard
+   *
+   * The arrows move the selected rack by one grid step, or by one centimetre with Shift, which is
+   * how a row is put in line without a steady hand. Ctrl + Z undoes and Ctrl + Shift + Z or
+   * Ctrl + Y redoes; Cmd on a Mac.
+   * ------------------------------------------------------------------- */
+
+  const NUDGES = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  // Presses closer together than this, in milliseconds, are one step to undo.
+  const NUDGE_RUN = 800;
+
+  document.addEventListener('keydown', function (event) {
+    const typing = event.target instanceof Element && event.target.closest('input, textarea, select, [contenteditable]');
+    if (typing) return;
+
+    if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+      const key = event.key.toLowerCase();
+      if (key === 'z' || key === 'y') {
+        event.preventDefault();
+        if (key === 'y' || event.shiftKey) redo();
+        else undo();
+      }
+      return;
+    }
+
+    const direction = NUDGES[event.key];
+    if (!direction || !selected) return;
+    event.preventDefault();
+    const rackId = selected.dataset.rackId;
+    const now = Date.now();
+    if (lastNudge.id !== rackId || now - lastNudge.at > NUDGE_RUN) checkpoint();
+    lastNudge = { id: rackId, at: now };
+
+    const step = event.shiftKey ? 1 : grid || 10;
+    const halfW = parseFloat(selected.dataset.width) / 2;
+    const halfD = parseFloat(selected.dataset.depth) / 2;
+    selected.dataset.x = clamp(parseFloat(selected.dataset.x) + direction[0] * step, halfW, floorWidth);
+    selected.dataset.y = clamp(parseFloat(selected.dataset.y) + direction[1] * step, halfD, floorDepth);
+    applyTransform(selected);
+    markDirty(selected, 'update');
+  });
+
+  if (undoButton) undoButton.addEventListener('click', undo);
+  if (redoButton) redoButton.addEventListener('click', redo);
 
   /* ----------------------------------------------------------------------
    * Saving
@@ -333,6 +489,8 @@
   }
 
   saveButton.addEventListener('click', async function () {
+    undone.length = 0;
+    redone.length = 0;
     saveButton.disabled = true;
     status.textContent = 'Saving...';
     const failures = [];

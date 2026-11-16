@@ -931,6 +931,12 @@
   font-size: .875rem;
 }
 
+.lens-editor-position {
+  font-size: .875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ==========================================================================
  * 4. The rack
  *
