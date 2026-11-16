@@ -18,7 +18,7 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from dcim.models import Device
+from dcim.models import Device, DeviceRole, DeviceType
 from django.urls import reverse
 
 from netbox_spatial_lens.elevation import mount_device
@@ -266,19 +266,22 @@ def build_floor_devices(floor, racks, devices) -> dict:
     to draw the cabinets.
 
     `racks` and `devices` are the querysets the reader may see. The cost is the same whatever the
-    size of the floor: one query for the placements, one for the devices with their types and
-    roles, and one for their tags. Ports are not loaded, so the hover card does not count them.
+    size of the floor: one query each for the placements, the devices, their types, their roles
+    and their tags. Ports are not loaded, so the hover card does not count them.
     """
     placements = RackPlacement.objects.filter(floor=floor, rack__in=racks).select_related('rack')
     by_rack = {placement.rack_id: placement.rack for placement in placements}
 
+    found = list(devices.filter(rack_id__in=by_rack, position__isnull=False).order_by('position'))
+    # A hall holds thousands of devices of a few dozen types and roles, so each is read once
+    # and shared: joined to every device row, each row built its own copy of both.
+    types = DeviceType.objects.in_bulk({device.device_type_id for device in found})
+    roles = DeviceRole.objects.in_bulk({device.role_id for device in found})
+
     mounted = defaultdict(list)
-    queryset = (
-        devices.filter(rack_id__in=by_rack, position__isnull=False)
-        .select_related('device_type', 'role')
-        .order_by('position')
-    )
-    for device in queryset:
+    for device in found:
+        device.device_type = types[device.device_type_id]
+        device.role = roles[device.role_id]
         mounted[device.rack_id].append(mount_device(by_rack[device.rack_id], device))
     tags = tag_slugs(Device, [m.device.pk for rack_devices in mounted.values() for m in rack_devices])
 
