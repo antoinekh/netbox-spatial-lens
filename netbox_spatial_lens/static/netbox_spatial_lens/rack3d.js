@@ -298,7 +298,7 @@ function build(stage, config) {
   }
 
   function cableInFocus(cable, bands) {
-    return (!bands.size || bands.has(cable.colour)) && finderKeeps('cables', [String(cable.id)]);
+    return (!bands.size || bands.has(cable.kind)) && finderKeeps('cables', [String(cable.id)]);
   }
 
   function apply() {

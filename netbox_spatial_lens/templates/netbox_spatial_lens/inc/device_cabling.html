@@ -9,7 +9,7 @@ device rather than in whatever direction the cable happened to be recorded.
 {% for run in runs %}
   {% if run.local_device.pk == device.pk %}
     <div class="lens-cable" data-cable-id="{{ run.cable.pk }}"
-         data-lens-filterable="cables" data-band="{{ run.colour }}"
+         data-lens-filterable="cables" data-band="{{ run.kind }}"
          data-termination="{{ run.termination_type }}/{{ run.termination_id }}" tabindex="0">
       <span class="lens-cable__dot" style="background: {{ run.colour }};"></span>
       <span class="lens-cable__local">{{ run.local_name }}</span>
@@ -24,7 +24,7 @@ device rather than in whatever direction the cable happened to be recorded.
     a termination on file here.
     {% endcomment %}
     <div class="lens-cable" data-cable-id="{{ run.cable.pk }}"
-         data-lens-filterable="cables" data-band="{{ run.colour }}"
+         data-lens-filterable="cables" data-band="{{ run.kind }}"
          data-termination="{{ run.termination_type }}/{{ run.termination_id }}" tabindex="0">
       <span class="lens-cable__dot" style="background: {{ run.colour }};"></span>
       <span class="lens-cable__local">{{ run.peer_port_name }}</span>

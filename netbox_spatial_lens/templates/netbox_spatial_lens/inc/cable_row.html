@@ -3,7 +3,7 @@ One cable. Carries both device ids so that selecting either end highlights this 
 own cable id so that clicking the row highlights the line and both devices in the drawing.
 {% endcomment %}
 <div class="lens-cable" data-cable-id="{{ run.cable.pk }}"
-     data-lens-filterable="cables" data-band="{{ run.colour }}"
+     data-lens-filterable="cables" data-band="{{ run.kind }}"
      data-device-id="{{ run.local_device.pk }}"
      data-termination="{{ run.termination_type }}/{{ run.termination_id }}"
      {% if run.peer_device %}data-peer-device-id="{{ run.peer_device.pk }}"{% endif %}

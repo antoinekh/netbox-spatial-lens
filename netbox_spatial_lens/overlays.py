@@ -20,6 +20,7 @@ import logging
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 
+from django.utils.text import slugify
 from netbox.plugins import get_plugin_config
 
 from netbox_spatial_lens.palette import COOLING, NO_DATA, UTILISATION, utilisation_colour
@@ -39,6 +40,7 @@ __all__ = (
     'Stat',
     'band_key',
     'build_legend',
+    'declared_key',
     'floor_power_utilisation',
     'floor_space_utilisation',
     'get_overlay',
@@ -87,10 +89,9 @@ class LegendEntry:
     # built for a particular floor or rack, so the legend doubles as a tally: which is what
     # an overlay is usually being asked, and the reason to look at one at all.
     count: int = 0
-    # What picking this band matches on the drawing, as `data-band`. The colour where the
-    # colours are the bands, which is every legend whose colours are chosen to be distinct. A
-    # categorical legend keys on the label instead: two roles may wear one colour, and keyed on
-    # the colour they were counted and picked together.
+    # What picking this band matches on the drawing, as `data-band`, and what a shared link
+    # carries. A name, never the colour: two roles may wear one colour, and a link keyed on a
+    # colour stops working the day the palette changes. The colour only when nothing names it.
     key: str = ''
 
     def __post_init__(self) -> None:
@@ -171,16 +172,26 @@ class Overlay(Colouring):
     """
 
 
+def declared_key(entry: LegendEntry) -> str:
+    """
+    The key of a band declared up front: its label as a slug, such as `90-and-over`.
+    """
+    return entry.key if entry.key != entry.colour else slugify(entry.label) or entry.colour
+
+
 def band_key(value: RackValue, declared: Sequence[LegendEntry]) -> str:
     """
     The key of the legend band a value falls in.
 
-    A declared legend bands by colour, and its colours are distinct by construction. A derived
-    one bands by label, because the colours come from the data and two names may share one.
+    A declared legend places a value by its colour, and its colours are distinct by
+    construction. A derived one bands by label, because the colours come from the data and two
+    names may share one.
     """
     if not value.has_data:
         return NO_DATA_KEY
-    return value.colour if declared else value.label
+    if not declared:
+        return value.label
+    return next((declared_key(entry) for entry in declared if entry.colour == value.colour), value.colour)
 
 
 def build_legend(declared: Sequence[LegendEntry], values: Iterable[RackValue]) -> list[LegendEntry]:
@@ -205,7 +216,7 @@ def build_legend(declared: Sequence[LegendEntry], values: Iterable[RackValue]) -
         tally[key] = tally.get(key, 0) + 1
 
     if declared:
-        entries = [LegendEntry(e.colour, e.label, tally.get(e.colour, 0), key=e.colour) for e in declared]
+        entries = [LegendEntry(e.colour, e.label, tally.get(declared_key(e), 0), key=declared_key(e)) for e in declared]
     else:
         colours: dict[str, str] = {}
         for value in values:

@@ -30,11 +30,13 @@ class LegendBandTest(LensTestCase):
         entry = overlay.legend_for([value])[0]
         self.assertEqual(overlay.band_of(value), entry.key)
 
-    def test_a_declared_legend_keys_on_its_colours(self):
-        overlay = Overlay('x', 'X', lambda racks: {}, legend=[LegendEntry('#111', 'Low')])
-        value = RackValue('#111', '12% used', 12)
-        self.assertEqual(overlay.band_of(value), '#111')
-        self.assertEqual(overlay.legend_for([value])[0].key, '#111')
+    def test_a_declared_legend_keys_on_the_names_of_its_bands(self):
+        # Placed by colour, named by label: a link that carries the band outlives the palette.
+        overlay = Overlay('x', 'X', lambda racks: {}, legend=[LegendEntry('#111', '90% and over')])
+        value = RackValue('#111', '95% used', 95)
+        self.assertEqual(overlay.band_of(value), '90-and-over')
+        entry = overlay.legend_for([value])[0]
+        self.assertEqual((entry.key, entry.count), ('90-and-over', 1))
 
     def test_no_data_has_a_key_of_its_own(self):
         overlay = Overlay('x', 'X', lambda racks: {})

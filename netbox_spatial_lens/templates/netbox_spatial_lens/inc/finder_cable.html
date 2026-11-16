@@ -6,7 +6,7 @@ question as "which of these reaches R308".
 {% endcomment %}
 <div class="lens-finder__row" data-lens-pick="{{ row.cable.pk }}"
      data-lens-name="{{ row.local_device }} {{ row.local_name }} {{ row.peer_name }} {{ row.peer_rack }}"
-     data-lens-filterable="cables" data-band="{{ row.colour }}" tabindex="0" role="checkbox"
+     data-lens-filterable="cables" data-band="{{ row.kind }}" tabindex="0" role="checkbox"
      aria-checked="false">
   <span class="lens-finder__tick" aria-hidden="true"></span>
   <span class="lens-cable__dot" style="background: {{ row.colour }};"></span>

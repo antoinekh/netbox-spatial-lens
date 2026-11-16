@@ -38,7 +38,7 @@ An item missing from the dictionary counts as no data. If the function raises, t
 
 ### The legend
 
-- **Fixed bands:** pass `legend=[LegendEntry(colour, label), …]` (`netbox_spatial_lens.overlays.LegendEntry`). Every colour your function returns must be one of these colours, and each colour must be used by one entry only: the legend counts and filters by colour. Use fixed bands when the bands exist whatever the data is, such as "how full". `netbox_spatial_lens.palette.utilisation_colour(percent)` and `netbox_spatial_lens.overlays.UTILISATION_LEGEND` give the plugin's own four bands.
+- **Fixed bands:** pass `legend=[LegendEntry(colour, label), …]` (`netbox_spatial_lens.overlays.LegendEntry`). Every colour your function returns must be one of these colours, and each colour must be used by one entry only: the legend places a value in its band by colour. A shared link names the band by its label, so keep the labels stable. Use fixed bands when the bands exist whatever the data is, such as "how full". `netbox_spatial_lens.palette.utilisation_colour(percent)` and `netbox_spatial_lens.overlays.UTILISATION_LEGEND` give the plugin's own four bands.
 - **Bands from the data:** pass no legend. The legend then has one entry per distinct `label`, in name order, and filters by label, so two labels may share a colour. Use it when the values are names, such as tenants. `netbox_spatial_lens.palette.distinct_colours(names)` gives each name a colour that is stable across restarts and not used by another name.
 
 The **No data** entry is always added last.

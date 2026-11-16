@@ -70,9 +70,9 @@
   }
 
   /* Whether a circuit survives the provider filter. The provider legend keys its bands on the
-   * provider colours, which are distinct by construction. */
+   * provider names. */
   function inCircuitBand(link) {
-    return !circuitBands.length || circuitBands.includes(link.colour);
+    return !circuitBands.length || circuitBands.includes(link.band);
   }
 
   function inFocus(group, id) {

@@ -17,7 +17,7 @@ from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
 
 from netbox_spatial_lens.overlays import NO_DATA_COLOUR as NO_DATA
-from netbox_spatial_lens.overlays import NO_DATA_LABEL, LegendEntry, Stat
+from netbox_spatial_lens.overlays import NO_DATA_KEY, NO_DATA_LABEL, LegendEntry, Stat
 from netbox_spatial_lens.palette import NODE, distinct_colours
 from netbox_spatial_lens.site_overlays import resolve_site_overlay
 
@@ -84,6 +84,12 @@ class WorldLink:
     # outside the estate, and which of them a line belongs to is the question the drawing held
     # the answer to and could not be asked.
     colour: str = NO_DATA
+
+    @property
+    def band(self) -> str:
+        """The provider legend band this circuit falls in: its provider's name."""
+        provider = getattr(self.circuit, 'provider', None)
+        return provider.name if provider else NO_DATA_KEY
 
 
 @dataclass
@@ -264,8 +270,8 @@ def _provider_legend(links: Sequence) -> list[LegendEntry]:
         if name:
             colours[name] = link.colour
 
-    entries = [LegendEntry(colours[name], name, counts[name]) for name in sorted(colours)]
-    entries.append(LegendEntry(NO_DATA, NO_DATA_LABEL, counts.get('', 0)))
+    entries = [LegendEntry(colours[name], name, counts[name], key=name) for name in sorted(colours)]
+    entries.append(LegendEntry(NO_DATA, NO_DATA_LABEL, counts.get('', 0), key=NO_DATA_KEY))
     return entries
 
 

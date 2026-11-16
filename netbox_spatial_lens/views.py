@@ -520,6 +520,7 @@ class WorldView(generic.ObjectListView):
                             'width': link.width,
                             'label': link.label,
                             'colour': link.colour,
+                            'band': link.band,
                             'url': link.circuit.get_absolute_url(),
                         }
                         for link in world.links

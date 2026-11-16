@@ -3,7 +3,7 @@ One circuit in the circuit finder. Named by both of its ends, which is how someb
 {% endcomment %}
 <div class="lens-finder__row" data-lens-pick="{{ row.circuit.pk }}"
      data-lens-name="{{ row.label }} {{ row.a.label }} {{ row.z.label }}"
-     data-lens-filterable="circuits" data-band="{{ row.colour }}" tabindex="0" role="checkbox"
+     data-lens-filterable="circuits" data-band="{{ row.band }}" tabindex="0" role="checkbox"
      aria-checked="false">
   <span class="lens-finder__tick" aria-hidden="true"></span>
   <span class="lens-cable__dot" style="background: {{ row.colour }};"></span>

@@ -334,7 +334,7 @@ def kind_legend(runs: Iterable) -> list[LegendEntry]:
     for run in runs:
         counts[run.kind] = counts.get(run.kind, 0) + 1
     return [
-        LegendEntry(CABLE_KIND_COLOURS[kind], label, counts[kind])
+        LegendEntry(CABLE_KIND_COLOURS[kind], label, counts[kind], key=kind)
         for kind, label in KIND_LABELS.items()
         if kind in counts
     ]
