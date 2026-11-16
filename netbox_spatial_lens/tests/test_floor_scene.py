@@ -267,6 +267,14 @@ class FloorDevicesTest(ViewTestCase):
         facts = self._data()['racks'][0]['devices'][0]['facts']
         self.assertIn('U1 · mounted front', facts)
 
+    def test_a_device_carries_its_tags_for_the_finder(self):
+        from dcim.models import Device
+
+        Device.objects.get(name='front').tags.add('blue', 'core')
+        by_label = {d['label']: d['filters']['device-tags'] for d in self._data()['racks'][0]['devices']}
+        self.assertEqual(sorted(by_label.pop('front').split()), ['blue', 'core'])
+        self.assertEqual(set(by_label.values()), {''})
+
     def test_the_cost_does_not_grow_with_the_floor(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext

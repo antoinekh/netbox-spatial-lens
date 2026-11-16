@@ -18,6 +18,7 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+from dcim.models import Device
 from django.urls import reverse
 
 from netbox_spatial_lens.elevation import mount_device
@@ -25,6 +26,7 @@ from netbox_spatial_lens.floor_cabling import RUN_COLOUR
 from netbox_spatial_lens.geometry import floor_viewport
 from netbox_spatial_lens.models import RackPlacement
 from netbox_spatial_lens.scene import CabinetFrame, cabinet_height, scene_device
+from netbox_spatial_lens.tags import tag_slugs
 
 __all__ = (
     'FloorScene',
@@ -264,8 +266,8 @@ def build_floor_devices(floor, racks, devices) -> dict:
     to draw the cabinets.
 
     `racks` and `devices` are the querysets the reader may see. The cost is the same whatever the
-    size of the floor: one query for the placements and one for the devices with their types,
-    roles and tags. Ports are not loaded, so the hover card does not count them.
+    size of the floor: one query for the placements, one for the devices with their types and
+    roles, and one for their tags. Ports are not loaded, so the hover card does not count them.
     """
     placements = RackPlacement.objects.filter(floor=floor, rack__in=racks).select_related('rack')
     by_rack = {placement.rack_id: placement.rack for placement in placements}
@@ -274,11 +276,11 @@ def build_floor_devices(floor, racks, devices) -> dict:
     queryset = (
         devices.filter(rack_id__in=by_rack, position__isnull=False)
         .select_related('device_type', 'role')
-        .prefetch_related('tags')
         .order_by('position')
     )
     for device in queryset:
         mounted[device.rack_id].append(mount_device(by_rack[device.rack_id], device))
+    tags = tag_slugs(Device, [m.device.pk for rack_devices in mounted.values() for m in rack_devices])
 
     entries = []
     for rack_id, rack in by_rack.items():
@@ -287,7 +289,10 @@ def build_floor_devices(floor, racks, devices) -> dict:
             {
                 'id': rack_id,
                 'cabinet': frame.as_json(),
-                'devices': [scene_device(frame, m, ports=False).as_json() for m in mounted[rack_id]],
+                'devices': [
+                    scene_device(frame, m, ports=False, tags=tags.get(m.device.pk, ())).as_json()
+                    for m in mounted[rack_id]
+                ],
             }
         )
     return {'racks': entries}

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 __all__ = (
     'TagCount',
+    'tag_slugs',
     'tags_in_use',
 )
 
@@ -34,3 +35,25 @@ def tags_in_use(objects: Iterable) -> list[TagCount]:
             else:
                 counts[tag.pk] = TagCount(tag=tag, count=1)
     return sorted(counts.values(), key=lambda item: item.tag.name.lower())
+
+
+def tag_slugs(model, pks: Iterable[int]) -> dict[int, list[str]]:
+    """
+    The tag slugs of each of `pks`, which are objects of `model`, in one query and in tag order.
+
+    For a drawing of thousands of objects that needs the slugs alone. `prefetch_related('tags')`
+    builds a queryset per object, which for the devices of a whole hall is most of the request.
+    An object with no tag is absent.
+    """
+    from django.contrib.contenttypes.models import ContentType
+    from extras.models import TaggedItem
+
+    rows = (
+        TaggedItem.objects.filter(content_type=ContentType.objects.get_for_model(model), object_id__in=pks)
+        .order_by('tag__weight', 'tag__name')
+        .values_list('object_id', 'tag__slug')
+    )
+    slugs: dict[int, list[str]] = {}
+    for object_id, slug in rows:
+        slugs.setdefault(object_id, []).append(slug)
+    return slugs

@@ -15,6 +15,7 @@ towards the reader standing at the front. The origin is the centre of the cabine
 on the floor.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from netbox_spatial_lens.elevation import RackElevation, unit_offset
@@ -354,13 +355,16 @@ def _facts(mounted, ports: bool) -> list[str]:
     return facts
 
 
-def scene_device(frame: CabinetFrame, mounted, ports: bool = True) -> SceneDevice:
+def scene_device(frame: CabinetFrame, mounted, ports: bool = True, tags: Sequence[str] | None = None) -> SceneDevice:
     """
     One mounted device, ready to draw. `ports` says whether its ports were loaded, so its hover
-    card can count them.
+    card can count them. `tags` is its tag slugs where the caller read them in bulk; without
+    them they are read from the device, which the caller then prefetches.
     """
     device = mounted.device
-    filters = {'device-tags': ' '.join(tag.slug for tag in device.tags.all())}
+    if tags is None:
+        tags = [tag.slug for tag in device.tags.all()]
+    filters = {'device-tags': ' '.join(tags)}
     filters.update({cell.filter.group: cell.keys for cell in mounted.field_cells})
     return SceneDevice(
         device=device,
