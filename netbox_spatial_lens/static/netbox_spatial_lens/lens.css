@@ -819,6 +819,12 @@
   stroke-opacity: .95;
 }
 
+.lens-floor-run.is-receded,
+.lens-floor-exit.is-receded {
+  opacity: .1;
+  pointer-events: none;
+}
+
 /* An exit is dashed because it does not end where it is drawn: the far end is somewhere off
    this plan, and a solid line to a wall would claim otherwise. */
 .lens-floor-exit line {

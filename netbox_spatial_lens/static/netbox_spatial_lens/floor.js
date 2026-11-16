@@ -28,6 +28,9 @@
   const table = document.querySelector('[data-lens-rack-table]');
   const rows = table ? Array.from(table.querySelectorAll('tbody tr')) : [];
   const rowCount = document.querySelector('[data-lens-rack-count]');
+  // The cabling on the plan: a run names its two racks, an exit the one rack it leaves.
+  const cabling = Array.from(svg.querySelectorAll('.lens-floor-run, .lens-floor-exit'));
+  const rackById = new Map(racks.map((rack) => [rack.dataset.rackId, rack]));
 
   let term = '';
   const searchHandlers = [];
@@ -72,6 +75,11 @@
    * and a name typed, a search that matches only racks in another band leaves the room empty,
    * and the box has to say so or it looks like a plan that failed to load. */
   function report() {
+    // A cable recedes unless every rack it joins is on show, which is the rule the 3D room keeps.
+    cabling.forEach(function (line) {
+      const ends = [line.dataset.rackA, line.dataset.rackB, line.dataset.rackId].filter(Boolean);
+      line.classList.toggle('is-receded', ends.some((id) => !rackById.has(id) || receded(rackById.get(id))));
+    });
     if (findBox) findBox.classList.toggle('is-empty', Boolean(term) && shown(racks).length === 0);
     if (rowCount) {
       const visible = shown(rows).length;
