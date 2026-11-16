@@ -10,6 +10,10 @@ PDU exercises the elevation, the cabling and the power chain; anything larger on
 failure harder to read.
 """
 
+import types
+from importlib import import_module
+from unittest import mock
+
 from core.models import ObjectType
 from dcim.models import (
     Cable,
@@ -25,19 +29,24 @@ from dcim.models import (
     Rack,
     Site,
 )
+from django.apps import apps
 from django.test import TestCase
 
+from netbox_spatial_lens.colouring import Level, Reading, registry
 from netbox_spatial_lens.models import Floor, RackPlacement
 
 __all__ = (
     'LensTestCase',
     'cable',
+    'extension',
     'grant',
     'make_device',
     'make_floor',
     'make_rack',
     'place',
     'power_feed',
+    'read',
+    'read_devices',
 )
 
 
@@ -160,3 +169,41 @@ def grant(user, model: str, actions=('view',), constraints=None) -> None:
     )
     permission.users.add(user)
     permission.object_types.add(ObjectType.objects.get(app_label=app, model=name))
+
+
+def read(level: Level, name: str, items, **context) -> dict[int, Reading]:
+    """
+    What the registered colouring `name` says of `items`, by item id.
+    """
+    return registry.get(level, name).evaluate(items, **context)
+
+
+def read_devices(name: str, mounted) -> dict[int, Reading]:
+    """
+    What a device colouring says of the mounted devices of an elevation, by device id.
+    """
+    devices = [m.device for m in mounted]
+    return read(Level.DEVICES, name, devices, mounted={m.device.pk: m for m in mounted})
+
+
+def extension(source: str):
+    """
+    A patch under which this plugin has a `spatial_lens` module that runs `source` on import.
+
+    The registry then finds it the way it finds the module of a real plugin. Reload the registry
+    inside the patch, and again when the test ends.
+    """
+    app = apps.get_app_config('netbox_spatial_lens')
+
+    def fake_import(name: str):
+        if name != f'{app.name}.spatial_lens':
+            return import_module(name)
+        module = types.ModuleType(name)
+        exec(source, module.__dict__)
+        return module
+
+    return mock.patch.multiple(
+        'netbox_spatial_lens.colouring',
+        import_module=fake_import,
+        module_has_submodule=lambda package, name: package is app.module,
+    )

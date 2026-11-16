@@ -88,7 +88,7 @@ For the development stack, the demo database, and the commands that populate it,
 
 - **[net3d](https://github.com/hervehildenbrand/net3d)**: the zoom-through navigation, cable tracing and power chains. Not its architecture, which is a standalone Node app reading the REST API from outside.
 - **[NetBox Labs Visual Explorer](https://netboxlabs.com/docs/visual-explorer/floorplans/)**: the geometry model, one queryable row per placement. Its floorplan has no colourings, which is our reason to exist.
-- **[netbox-floorplan-plugin](https://github.com/netbox-community/netbox-floorplan-plugin)**: read as a one-shot importer. Its plan is a Fabric.js blob with no coordinate columns, so an overlay over it would be a JSON walk per rack.
+- **[netbox-floorplan-plugin](https://github.com/netbox-community/netbox-floorplan-plugin)**: read as a one-shot importer. Its plan is a Fabric.js blob with no coordinate columns, so a colouring over it would be a JSON walk per rack.
 - **[netbox-demo-data](https://github.com/netbox-community/netbox-demo-data)**: what everything is tested against.
 
 </details>

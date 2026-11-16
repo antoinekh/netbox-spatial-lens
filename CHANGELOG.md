@@ -2,13 +2,28 @@
 
 ## Unreleased
 
+### Upgrade notes
+
+- **Settings renamed.** `enable_builtin_overlays` and `default_overlay` are now `builtin_rack_colourings` and `default_rack_colouring`. In the same way, `enable_builtin_device_overlays`, `default_device_overlay`, `enable_builtin_site_overlays` and `default_site_overlay` are now `builtin_device_colourings`, `default_device_colouring`, `builtin_site_colourings` and `default_site_colouring`. An old name in `PLUGINS_CONFIG` is ignored.
+- **URL parameter renamed.** The colouring of a floor and of a site page is `?colour=`, and the colouring of the sites on the world map is `?sites=`. Both were `?overlay=`. A saved link with `?overlay=` opens with the default colouring.
+- **A colouring from another plugin must be rewritten.** The functions `register_overlay`, `register_device_overlay` and `register_site_overlay`, and the classes `RackValue` and `LegendEntry`, are replaced by `netbox_spatial_lens.extend`. The table "Upgrading a colouring from 0.5" in `docs/extending.md` gives each change.
+- **REST API.** `floors/<id>/layout/` takes `colour=` in place of `overlay=`, and returns the key `colouring` in place of `overlay`.
+
+### Changed
+
+- **Extending:** one interface for every colouring, in `netbox_spatial_lens.extend`. A colouring is a function with the `@colouring(level, name, ...)` decorator, in a module named `spatial_lens` in your plugin. The plugin finds that module by itself: there is no call from `ready()`, and the order of `PLUGINS` does not matter. One broken extension is logged and does not stop the others.
+- **Extending:** a colouring returns a `Reading` for each item. The gauge is explicit (`gauge=0.62`), no data is an item left out, and a reading names its legend band by key in place of a match on the colour. A reading can add lines to the hover card with `facts`. A colouring without bands gets a distinct colour for each label by itself.
+- **Extending:** `Band` and `Scale` declare a legend, and the plugin's own scales `UTILISATION` and `COMPLETION` are public. `Scale.reading(percent, label)` gives the band and the gauge in one call.
+- **Extending:** the function gets a `context` with the reader (`user`), what is drawn (`scope`: the floor or the rack) and `visible(queryset)`, which restricts a queryset to what the reader may view. In the rack view, the function gets `Device` objects, and the port counts and the power are in `context.mounted`.
+- **REST API:** in `floors/<id>/layout/`, each legend entry has its `band` key and its `count`, and each rack has its `band`.
+
 ### Added
 
 - **Background layers:** the layout editor has a Background layers panel to show or hide a layer, change its order and its opacity, and calibrate it. Calibrate lets you drag the layer, pull a corner to resize it at the proportions of the image, type a rotation, and use Set scale: click two points and give the real distance between them. The changes share Undo, Redo and Save with the racks.
 - **Background layers:** the layer form accepts a PDF. The browser converts its first page to a PNG with pdf.js before the upload, so the server still stores images only. The new `pdfjs_base` setting says where pdf.js loads from; empty turns the conversion off. The API and the import still take images only.
 - **Redundancy colouring:** a new colouring on the floor and in the rack shows which devices reach only one power feed. In the rack, a device is on two or more feeds, on one feed, or has no feed traced, and its hover card names the feeds and their panels. On the floor, the worst device decides the colour of the rack, and the label counts them: "3 of 40 devices on one feed". A PDU is not judged for its single inlet. Two feeds of one panel count as two; the label names the panel. The chain is followed through one PDU: a device behind two PDUs in a chain shows "No feed traced".
 - **World map:** a circuit has a hover card, as a site has: its ID, status, two ends, provider, type, tenant and commit rate. A selected circuit keeps its card on the map, with a link that opens the circuit in NetBox. The close button of the card clears the selection.
-- **World map:** the circuits have their own colouring, as the sites do: provider, type, status or tenant. The circuit legend follows it and filters by it, and the hover card of a circuit names the reading. The URL keeps it as `?circuits=`. The new settings `enable_builtin_circuit_overlays` and `default_circuit_overlay` choose what is offered, and another plugin can add a colouring with `register_circuit_overlay`.
+- **World map:** the circuits have their own colouring, as the sites do: provider, type, status or tenant. The circuit legend follows it and filters by it, and the hover card of a circuit names the reading. The URL keeps it as `?circuits=`. The new settings `builtin_circuit_colourings` and `default_circuit_colouring` choose what is offered, and another plugin can add a colouring of the circuits.
 - **Image export:** a button on the floor, the rack and the world map downloads the drawing as a PNG, with a title, the date and the legends. The image shows what is on screen: the camera, the zoom, the filters and the picked bands. A background layer that the browser cannot read is left out, and the image says so.
 
 ## v0.5.0 (2026-11-16)

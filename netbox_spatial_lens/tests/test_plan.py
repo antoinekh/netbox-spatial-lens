@@ -8,10 +8,11 @@ one type size, that a band alone never has to carry a magnitude, and that the fi
 plan agree with the colours on it.
 """
 
+from netbox_spatial_lens.colouring import Colouring, Level, registry
 from netbox_spatial_lens.elevation import build_elevation, rack_summary
 from netbox_spatial_lens.geometry import metre_step, metre_ticks, size_labels
 from netbox_spatial_lens.layout import build_layout, build_layouts, floor_summary
-from netbox_spatial_lens.overlays import Overlay, floor_space_utilisation, get_overlay
+from netbox_spatial_lens.rack_colourings import floor_space_utilisation
 from netbox_spatial_lens.tests.base import (
     LensTestCase,
     make_device,
@@ -93,7 +94,7 @@ class LabelSizingTest(LensTestCase):
 class GaugeTest(LensTestCase):
     """
     A band alone cannot tell 12% from 48%. The gauge carries what the band rounds away, and
-    only for an overlay that measures a quantity.
+    only for a colouring that measures a quantity.
     """
 
     def setUp(self):
@@ -102,26 +103,26 @@ class GaugeTest(LensTestCase):
         make_device(self.site, self.rack, 'srv', self.role, self.manufacturer, position=1, u_height=4)
         place(self.floor, self.rack)
 
-    def test_a_quantitative_overlay_yields_a_fraction(self):
-        placed = build_layout(self.floor, get_overlay('space'))
+    def test_a_quantitative_colouring_yields_a_fraction(self):
+        placed = build_layout(self.floor, registry.get(Level.RACKS, 'space'))
         self.assertAlmostEqual(placed[0].fraction, 0.4, places=2)
         self.assertEqual(placed[0].gauge_label, '40%')
 
-    def test_a_categorical_overlay_yields_none(self):
+    def test_a_categorical_colouring_yields_none(self):
         # A role is a name, not a magnitude, so there is nothing to draw a gauge of.
         self.rack.role = None
-        placed = build_layout(self.floor, get_overlay('role'))
+        placed = build_layout(self.floor, registry.get(Level.RACKS, 'role'))
         self.assertIsNone(placed[0].fraction)
         self.assertEqual(placed[0].gauge_label, '')
 
-    def test_a_rack_the_overlay_cannot_measure_yields_none(self):
+    def test_a_rack_the_colouring_cannot_measure_yields_none(self):
         rack = make_rack(self.site, name='R2')
         place(self.floor, rack, x=500, y=500)
-        placed = {p.rack.name: p for p in build_layout(self.floor, get_overlay('power'))}
+        placed = {p.rack.name: p for p in build_layout(self.floor, registry.get(Level.RACKS, 'power'))}
         self.assertIsNone(placed['R2'].fraction)
 
     def test_the_fill_never_runs_past_its_track(self):
-        placed = build_layout(self.floor, get_overlay('space'))[0]
+        placed = build_layout(self.floor, registry.get(Level.RACKS, 'space'))[0]
         self.assertLessEqual(placed.gauge_width, placed.gauge_track_width)
         self.assertGreaterEqual(placed.gauge_width, 0)
 
@@ -144,12 +145,16 @@ class SeveralFloorsTest(LensTestCase):
         self.assertEqual([p.rack.name for p in layouts[self.cage.pk]], ['C1'])
         self.assertEqual(layouts[self.empty.pk], [])
 
-    def test_an_overlay_is_handed_one_room_at_a_time(self):
+    def test_a_colouring_is_handed_one_room_at_a_time(self):
         # Extending promises a colouring the racks on the floor. Handed every room at once, one
         # that compares the racks in a room would silently compare across the site.
         seen = []
-        overlay = Overlay(name='probe', label='Probe', fn=lambda racks: seen.append({r.name for r in racks}))
-        build_layouts([self.hall, self.cage], overlay)
+
+        def probe(racks, context):
+            seen.append({rack.name for rack in racks})
+
+        colouring = Colouring(Level.RACKS, 'probe', 'Probe', probe)
+        build_layouts([self.hall, self.cage], colouring)
         self.assertCountEqual(seen, [{'H1'}, {'C1'}])
 
 
@@ -196,7 +201,7 @@ class SpaceUtilisationTest(LensTestCase):
 
     def test_it_costs_a_bounded_number_of_queries(self):
         # The point of the function. Per rack it was three queries, so a floor of twenty-six
-        # spent seventy-nine where the power overlay beside it spent seven.
+        # spent seventy-nine where the power colouring beside it spent seven.
         racks = [make_rack(self.site, name=f'R{i}', u_height=10) for i in range(12)]
         with self.assertNumQueries(2):
             floor_space_utilisation(racks)

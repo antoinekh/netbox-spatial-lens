@@ -9,7 +9,7 @@
  * other exists. The table rows carry the same attributes as the racks, so both narrowings reach
  * them too, and there they hide the row rather than fade it.
  *
- * Everything the card can say is already in the markup. A rack carries its name, its overlay
+ * Everything the card can say is already in the markup. A rack carries its name, its colouring
  * reading and the facts behind it on its own data attributes, so hovering costs no request and
  * works the same whether the page was rendered a second ago or came back from the cache.
  */

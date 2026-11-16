@@ -60,9 +60,9 @@ def rack_footprint_cm(rack: 'Rack') -> tuple[float, float, bool]:
 @dataclass
 class PlacedRack:
     """
-    One rack, ready to draw: where it is, how big it is, and what the overlay said about it.
+    One rack, ready to draw: where it is, how big it is, and what the colouring said about it.
 
-    The overlay's result is kept whole rather than flattened into a colour and a label. The
+    The colouring's result is kept whole rather than flattened into a colour and a label. The
     legend is built from the distinct results on a floor, so it needs to compare them, and a
     pair of strings pulled apart here could not be put back together reliably.
     """
@@ -74,14 +74,14 @@ class PlacedRack:
     width: float
     depth: float
     estimated: bool
-    value: object  # overlays.RackValue
+    value: object  # colouring.Reading
     # The name's size in room centimetres, and how much of the name fits at it. Both are set
     # once for the whole floor rather than per rack: see `size_labels`.
     label_size: float = 12.0
     display_name: str = ''
-    # What the hover card lists, as label/value pairs. Built by the layout so the drawing has
-    # somewhere to read them from without a second query per rack.
-    facts: list = field(default_factory=list)
+    # What the hover card lists of the rack itself, as label/value pairs. Built by the layout
+    # so the drawing has somewhere to read them from without a second query per rack.
+    rack_facts: list = field(default_factory=list)
     # The legend band this rack falls in, as the key the legend picks it by.
     band: str = ''
     # How many devices the reader may see in this rack.
@@ -102,22 +102,18 @@ class PlacedRack:
         return self.value.has_data
 
     @property
+    def facts(self) -> list:
+        """The lines of the hover card: what the colouring adds, then the rack's own."""
+        return [*self.value.facts, *self.rack_facts]
+
+    @property
     def fraction(self) -> float | None:
         """
-        Where this rack sits between empty and full, as 0 to 1, or None when the overlay is
-        not measuring a quantity.
-
-        Power and space answer with a percentage; role and cooling answer with a name. Only
-        the first kind can be drawn as a gauge, and asking the value what type it is here
-        keeps every overlay, including one registered by another plugin, from having to
-        declare which sort it is.
+        Where this rack sits between empty and full, as 0 to 1, or None when the colouring is
+        not measuring a quantity. Power and space answer with one; role and cooling do not.
         """
-        if not self.has_data or isinstance(self.value.value, str):
-            return None
-        try:
-            return max(0.0, min(1.0, float(self.value.value) / 100))
-        except (TypeError, ValueError):
-            return None
+        gauge = self.value.gauge
+        return None if gauge is None else max(0.0, min(1.0, float(gauge)))
 
     @property
     def label_turn(self) -> int:

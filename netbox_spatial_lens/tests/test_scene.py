@@ -17,7 +17,7 @@ from netbox_spatial_lens.scene import (
     UNIT_MM,
     build_scene,
 )
-from netbox_spatial_lens.tests.base import LensTestCase, cable, make_device, make_rack
+from netbox_spatial_lens.tests.base import LensTestCase, cable, make_device, make_rack, read_devices
 from netbox_spatial_lens.tests.test_views import ViewTestCase, grant
 
 
@@ -91,12 +91,10 @@ class DeviceBoxTest(LensTestCase):
         self.assertEqual(sorted(filters['device-tags'].split()), ['blue', 'core'])
 
     def test_the_hover_card_names_what_the_colouring_says_first(self):
-        from netbox_spatial_lens.device_overlays import get_device_overlay
-
         device = make_device(self.site, self.rack, 'coloured', self.role, self.manufacturer)
         elevation = build_elevation(self.rack)
         mounted = elevation.devices[0]
-        mounted.value = get_device_overlay('role').evaluate(elevation.devices)[device.pk]
+        mounted.value = read_devices('role', elevation.devices)[device.pk]
         facts = _device(build_scene(elevation), device).facts
         self.assertEqual(facts[0], self.role.name)
 

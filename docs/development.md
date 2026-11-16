@@ -77,7 +77,7 @@ In the demo data, `MDF` is the site worth looking at: 26 racks, of which 24 are 
 
 ## The extending examples
 
-`make up EXAMPLES=true` starts the stack with `dev/lens_examples`, a plugin that reads the examples out of [extending.md](extending.md) and registers them: **Heat** on the floor, **Support** in the rack view and **Tier** on the world map. It also offers the demo's `compliancy` custom field as a filter. Without the flag, the stack shows only what the plugin ships.
+`make up EXAMPLES=true` starts the stack with `dev/lens_examples`, a plugin whose `spatial_lens` module is the example of [extending.md](extending.md), read from the page: **Heat** and **Failed** on the floor, **Support** in the rack view and **Tier** on the world map. It also offers the demo's `compliancy` custom field as a filter. Without the flag, the stack shows only what the plugin ships.
 
 ```bash
 make up EXAMPLES=true   # the stack, with the examples registered

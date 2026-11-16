@@ -8,10 +8,11 @@ from django.conf import settings
 from django.test import override_settings
 from django.urls import reverse
 
+from netbox_spatial_lens.colouring import Level, registry
 from netbox_spatial_lens.elevation import build_elevation
 from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs
 from netbox_spatial_lens.floor_scene import RUN_RISE_MIN_MM, TRAY_ABOVE_MM, build_floor_devices, build_floor_scene
-from netbox_spatial_lens.layout import build_layout, resolve_overlay
+from netbox_spatial_lens.layout import build_layout
 from netbox_spatial_lens.scene import PLINTH_MM, ROOF_MM, UNIT_MM, CabinetFrame, build_scene
 from netbox_spatial_lens.tests.base import LensTestCase, cable, make_device, make_floor, make_rack, place
 from netbox_spatial_lens.tests.test_views import ViewTestCase, grant
@@ -32,8 +33,8 @@ class RackStandTest(LensTestCase):
         self.floor = make_floor(self.site, width=10, depth=8)
         self.rack = make_rack(self.site, name='R1', u_height=42, outer_width=600, outer_depth=1200, outer_unit='mm')
 
-    def _scene(self, overlay=None):
-        return build_floor_scene(self.floor, build_layout(self.floor, overlay))
+    def _scene(self, colouring=None):
+        return build_floor_scene(self.floor, build_layout(self.floor, colouring))
 
     def test_it_stands_where_the_plan_puts_it(self):
         place(self.floor, self.rack, x=250, y=400)
@@ -68,13 +69,13 @@ class RackStandTest(LensTestCase):
     def test_a_quantity_colouring_carries_its_reading(self):
         place(self.floor, self.rack)
         make_device(self.site, self.rack, 'srv', self.role, self.manufacturer, u_height=21)
-        entry = self._scene(resolve_overlay('space')).as_json()['racks'][0]
+        entry = self._scene(registry.get(Level.RACKS, 'space')).as_json()['racks'][0]
         self.assertAlmostEqual(entry['fraction'], 0.5)
         self.assertEqual(entry['gauge'], '50%')
 
     def test_a_named_colouring_has_no_reading(self):
         place(self.floor, self.rack)
-        entry = self._scene(resolve_overlay('role')).as_json()['racks'][0]
+        entry = self._scene(registry.get(Level.RACKS, 'role')).as_json()['racks'][0]
         self.assertIsNone(entry['fraction'])
 
     def test_it_leads_into_the_rack(self):

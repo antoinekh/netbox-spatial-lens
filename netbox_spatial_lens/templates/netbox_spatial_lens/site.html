@@ -20,10 +20,10 @@ site with four rooms that it has one.
 <div class="lens-toolbar">
   {% include 'netbox_spatial_lens/inc/levels.html' with site=object %}
   <div class="btn-group btn-group-sm" role="group" aria-label="Colour the racks by">
-    {% for o in overlays %}
-      <a href="?overlay={{ o.name }}"
-         class="btn btn-outline-primary{% if overlay and o.name == overlay.name %} active{% endif %}"
-         {% if overlay and o.name == overlay.name %}aria-current="true"{% endif %}
+    {% for o in colourings %}
+      <a href="?colour={{ o.name }}"
+         class="btn btn-outline-primary{% if colouring and o.name == colouring.name %} active{% endif %}"
+         {% if colouring and o.name == colouring.name %}aria-current="true"{% endif %}
          title="{{ o.description }}">{{ o.label }}</a>
     {% endfor %}
   </div>

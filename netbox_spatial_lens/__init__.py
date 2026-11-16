@@ -24,26 +24,21 @@ class SpatialLensConfig(PluginConfig):
         # Custom fields offered as filters, the way tags are, on the floor (racks) and in the rack
         # view (devices): a list of field names. Only select and multiselect fields are used.
         'filter_custom_fields': [],
-        # Which built-in overlays to register. True for all, False for none, or a list of
-        # names from 'power', 'cooling', 'space', 'role' and 'redundancy'.
-        'enable_builtin_overlays': True,
-        # Overlay selected when a floor is opened without one named.
-        'default_overlay': 'power',
-        # Which built-in device colourings a rack offers. True for all, False for none, or a
-        # list from 'role', 'status', 'tenant', 'cabling', 'power' and 'redundancy'.
-        'enable_builtin_device_overlays': True,
-        # Colouring selected when a rack is opened without one named.
-        'default_device_overlay': 'role',
-        # Which built-in site colourings the world map offers. True for all, False for none, or
-        # a list from 'group', 'status', 'tenant' and 'region'.
-        'enable_builtin_site_overlays': True,
-        # Colouring selected when the map is opened without one named.
-        'default_site_overlay': 'group',
-        # Which built-in circuit colourings the world map offers. True for all, False for none,
-        # or a list from 'provider', 'type', 'status' and 'tenant'.
-        'enable_builtin_circuit_overlays': True,
-        # Circuit colouring selected when the map is opened without one named.
-        'default_circuit_overlay': 'provider',
+        # The built-in colourings offered on each level: True for all, False for none, or a list
+        # of names. Then the colouring a drawing opens with when its URL names none.
+        #
+        # The racks on a floor: 'power', 'cooling', 'space', 'role' and 'redundancy'.
+        'builtin_rack_colourings': True,
+        'default_rack_colouring': 'power',
+        # The devices in a rack: 'role', 'status', 'tenant', 'cabling', 'power' and 'redundancy'.
+        'builtin_device_colourings': True,
+        'default_device_colouring': 'role',
+        # The sites on the world map: 'group', 'status', 'tenant' and 'region'.
+        'builtin_site_colourings': True,
+        'default_site_colouring': 'group',
+        # The circuits on the world map: 'provider', 'type', 'status' and 'tenant'.
+        'builtin_circuit_colourings': True,
+        'default_circuit_colouring': 'provider',
         # Tiles for the world map. OpenStreetMap's own tiles are the default because they
         # need no API key; CARTO's basemaps now watermark every tile without one. Point this
         # at your own tile server, or set it to None, on a site with no egress. Without tiles
@@ -83,16 +78,7 @@ class SpatialLensConfig(PluginConfig):
     def ready(self) -> None:
         super().ready()
 
-        from . import (
-            circuit_overlays,
-            device_overlays,
-            overlays,
-            signals,  # noqa: F401  (connects the receivers)
-            site_overlays,
-        )
-
-        for level in (overlays, device_overlays, site_overlays, circuit_overlays):
-            level.registry.register_configured_builtins()
+        from . import signals  # noqa: F401  (connects the receivers)
 
 
 config = SpatialLensConfig

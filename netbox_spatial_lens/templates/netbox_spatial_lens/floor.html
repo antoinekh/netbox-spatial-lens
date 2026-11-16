@@ -41,19 +41,19 @@ page's title, so it is not said again here.
             </div>
           {% endif %}
           <div class="btn-group btn-group-sm" role="group" aria-label="Colour the racks by">
-            {% for o in overlays %}
-              <a href="?overlay={{ o.name }}{% if show_runs %}&amp;runs=1{% endif %}"
-                 class="btn btn-outline-primary{% if overlay and o.name == overlay.name %} active{% endif %}"
-                 {% if overlay and o.name == overlay.name %}aria-current="true"{% endif %}
+            {% for o in colourings %}
+              <a href="?colour={{ o.name }}{% if show_runs %}&amp;runs=1{% endif %}"
+                 class="btn btn-outline-primary{% if colouring and o.name == colouring.name %} active{% endif %}"
+                 {% if colouring and o.name == colouring.name %}aria-current="true"{% endif %}
                  title="{{ o.description }}">{{ o.label }}</a>
             {% endfor %}
           </div>
           {% comment %}
-          A toggle rather than an overlay: the runs are drawn over whatever colouring is
+          A toggle rather than a colouring: the runs are drawn over whatever colouring is
           already chosen, and asking somebody to give up the power view to see the cabling
           would make the two facts impossible to read together.
           {% endcomment %}
-          <a href="?overlay={{ overlay.name|default:'' }}{% if not show_runs %}&amp;runs=1{% endif %}"
+          <a href="?colour={{ colouring.name|default:'' }}{% if not show_runs %}&amp;runs=1{% endif %}"
              class="btn btn-sm btn-outline-secondary{% if show_runs %} active{% endif %}"
              title="Draw a line between every pair of racks joined by a cable, weighted by how many.">
             <i class="mdi mdi-transit-connection-variant"></i> Cable runs
@@ -74,7 +74,7 @@ page's title, so it is not said again here.
               <input type="search" data-lens-find placeholder="Name or asset tag" aria-label="Find a rack or asset tag"
                      autocomplete="off" spellcheck="false">
             </label>
-            {% include 'netbox_spatial_lens/inc/export.html' with site=object.effective_site name=object.name colouring=overlay.label %}
+            {% include 'netbox_spatial_lens/inc/export.html' with site=object.effective_site name=object.name colouring=colouring.label %}
             {% include 'netbox_spatial_lens/inc/help.html' with text='Click a rack to go inside it. Hover a rack to see its detail. In 3D, drag to turn the room, right-drag to move it, scroll to zoom. In 2D, Ctrl + wheel zooms and dragging moves the plan when zoomed. The find box matches a name or an asset tag; Tags narrows to the racks with any tag you tick. Click legend bands to filter; you can pick several. Escape clears.' %}
           {% endif %}
         </div>
@@ -218,9 +218,9 @@ page's title, so it is not said again here.
   </div>
 
   <div class="col col-md-3 lens-side">
-    {% if overlay %}
+    {% if colouring %}
       <div class="card">
-        <h2 class="card-header">{{ overlay.label }}</h2>
+        <h2 class="card-header">{{ colouring.label }}</h2>
         <div class="card-body">
           {% comment %}
           The counts are in the legend rather than in a sentence below it, so the number sits
@@ -228,8 +228,8 @@ page's title, so it is not said again here.
           recorded this", never as a clean bill of health.
           {% endcomment %}
           {% include 'netbox_spatial_lens/inc/legend.html' with legend=legend filter='racks' %}
-          {% if silent_overlay %}
-            <p class="text-muted small mt-2 mb-0">{{ silent_overlay.label }} has no data on this floor.</p>
+          {% if silent_colouring %}
+            <p class="text-muted small mt-2 mb-0">{{ silent_colouring.label }} has no data on this floor.</p>
           {% endif %}
         </div>
       </div>
@@ -248,7 +248,7 @@ page's title, so it is not said again here.
         <div class="card-body">
           {% include 'netbox_spatial_lens/inc/legend.html' with legend=cabling_legend %}
           {% comment %}
-          The same rule as the overlays: nothing drawn must never be mistaken for nothing to
+          The same rule as the colourings: nothing drawn must never be mistaken for nothing to
           draw. A floor whose racks are cabled only internally shows no lines, and without
           these sentences the toggle looks broken rather than answered.
           {% endcomment %}

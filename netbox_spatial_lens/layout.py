@@ -3,7 +3,7 @@ Turning a floor into something drawable.
 
 Kept out of `views` because both the page and the REST API render from it, and a view module
 importing from another view module is the shape that leads to circular imports. Nothing here
-touches a request: given a floor and an overlay it returns positions and colours, which is
+touches a request: given a floor and a colouring it returns positions and colours, which is
 what makes it usable from the API, from a management command, or from a future renderer.
 """
 
@@ -13,16 +13,12 @@ from dataclasses import dataclass
 from dcim.models import Device, Rack
 from django.db.models import Count
 
+from netbox_spatial_lens.colouring import NO_READING
 from netbox_spatial_lens.geometry import PlacedRack, natural_key, rack_footprint_cm, size_labels
 from netbox_spatial_lens.models import RackPlacement
-from netbox_spatial_lens.overlays import (
-    RackValue,
-    Stat,
-    floor_power_utilisation,
-    floor_space_utilisation,
-    resolve_overlay,
-)
 from netbox_spatial_lens.palette import utilisation_colour
+from netbox_spatial_lens.rack_colourings import floor_power_utilisation, floor_space_utilisation
+from netbox_spatial_lens.stats import Stat
 
 __all__ = (
     'RackRow',
@@ -32,18 +28,17 @@ __all__ = (
     'first_colouring_with_data',
     'floor_summary',
     'rack_rows',
-    'resolve_overlay',
     'unplaced_racks',
 )
 
 
-def build_layout(floor, overlay, racks=None, devices=None) -> list[PlacedRack]:
+def build_layout(floor, colouring, racks=None, devices=None, user=None) -> list[PlacedRack]:
     """
     Everything one render of a floor needs.
 
-    The racks are fetched once, with the annotations and related objects the overlays read, so
+    The racks are fetched once, with the annotations and related objects the colourings read, so
     a floor costs a bounded number of queries rather than growing with the number of racks.
-    The power overlay is the exception and says so itself.
+    The power colouring is the exception and says so itself.
 
     `racks` is the set of racks the reader may see, and the view passes its own restricted
     queryset. A placement is the plugin's own object and NetBox will happily show it; the
@@ -53,11 +48,13 @@ def build_layout(floor, overlay, racks=None, devices=None) -> list[PlacedRack]:
 
     `devices` is restricted the same way, for the device count on each rack: a count that
     includes devices the reader may not open says something the rack page would not.
+
+    `user` is the reader, handed to the colouring in its context.
     """
-    return build_layouts([floor], overlay, racks=racks, devices=devices)[floor.pk]
+    return build_layouts([floor], colouring, racks=racks, devices=devices, user=user)[floor.pk]
 
 
-def build_layouts(floors, overlay, racks=None, devices=None, measure=False) -> dict[int, list[PlacedRack]]:
+def build_layouts(floors, colouring, racks=None, devices=None, measure=False, user=None) -> dict[int, list[PlacedRack]]:
     """
     The layouts of several floors, read together, keyed by floor id.
 
@@ -65,12 +62,12 @@ def build_layouts(floors, overlay, racks=None, devices=None, measure=False) -> d
     placement, device count, space and power queries, so a site of twenty rooms cost twenty
     times one. Here the placements and the device counts are one query each for every floor.
 
-    `measure` walks space and power once over the racks of every floor before the overlay
-    runs. Pass it where each floor's summary is shown, as on the site page: the overlay and
+    `measure` walks space and power once over the racks of every floor before the colouring
+    runs. Pass it where each floor's summary is shown, as on the site page: the colouring and
     `floor_summary` then find both answers already on the racks. A drawing that needs neither,
     such as the editor, leaves it off and does not pay for them.
 
-    The overlay is still handed the racks of one floor at a time, which is what `extending.md`
+    The colouring is still handed the racks of one floor at a time, which is what `extending.md`
     promises, so a colouring that compares the racks in a room keeps seeing one room.
 
     `racks` and `devices` restrict what is drawn, as in `build_layout`.
@@ -104,15 +101,18 @@ def build_layouts(floors, overlay, racks=None, devices=None, measure=False) -> d
         .values_list('rack_id', 'n')
     )
 
+    scopes = {floor.pk: floor for floor in floors}
     return {
-        floor_id: _place_racks(floor_placements, overlay, device_counts)
+        floor_id: _place_racks(floor_placements, colouring, device_counts, scope=scopes[floor_id], user=user)
         for floor_id, floor_placements in by_floor.items()
     }
 
 
-def _place_racks(placements: Sequence[RackPlacement], overlay, device_counts: dict[int, int]) -> list[PlacedRack]:
+def _place_racks(
+    placements: Sequence[RackPlacement], colouring, device_counts: dict[int, int], scope=None, user=None
+) -> list[PlacedRack]:
     """
-    One floor's placements as racks to draw, coloured by the overlay.
+    One floor's placements as racks to draw, coloured by the colouring.
     """
     placed = []
     for placement in placements:
@@ -127,44 +127,46 @@ def _place_racks(placements: Sequence[RackPlacement], overlay, device_counts: di
                 width=width,
                 depth=depth,
                 estimated=estimated,
-                # No overlay, as on the editor, still yields a RackValue: the neutral one.
-                value=RackValue(),
-                facts=_rack_facts(placement.rack, width, depth, estimated, device_count),
+                # No colouring, as on the editor, still yields a reading: the one for no data.
+                value=NO_READING,
+                rack_facts=_rack_facts(placement.rack, width, depth, estimated, device_count),
                 device_count=device_count,
             )
         )
-    if overlay:
-        colour_layout(placed, overlay)
+    if colouring:
+        colour_layout(placed, colouring, scope=scope, user=user)
     # One type size for the whole drawing, and names trimmed to the cabinets that hold them.
     size_labels(placed)
     return placed
 
 
-def colour_layout(placed: Sequence[PlacedRack], overlay) -> None:
+def colour_layout(placed: Sequence[PlacedRack], colouring, scope=None, user=None) -> None:
     """
-    Colour the racks of one floor by `overlay`, in place.
+    Colour the racks of one floor, `scope`, by `colouring`, in place.
     """
-    values = overlay.evaluate([p.rack for p in placed])
+    readings = colouring.evaluate([p.rack for p in placed], scope=scope, user=user)
     for p in placed:
-        p.value = values.get(p.rack.pk) or RackValue()
-        p.band = overlay.band_of(p.value)
+        p.value = readings[p.rack.pk]
+        p.band = p.value.band
 
 
-def first_colouring_with_data(placed: Sequence[PlacedRack], overlays: Sequence, tried) -> object | None:
+def first_colouring_with_data(
+    placed: Sequence[PlacedRack], colourings: Sequence, tried, scope=None, user=None
+) -> object | None:
     """
-    Colour the floor by the first of `overlays` that has an answer for any rack, and return it.
+    Colour the floor by the first of `colourings` that has an answer for any rack, and return it.
 
     For a floor opened with no colouring named, when the default one, `tried`, has nothing to
     say: a room drawn all grey on arrival reads as an empty inventory. None, and the floor left
     as it was, when no colouring has data either.
     """
     racks = [p.rack for p in placed]
-    for overlay in overlays:
-        if overlay is tried:
+    for colouring in colourings:
+        if colouring is tried:
             continue
-        if any(value.has_data for value in overlay.evaluate(racks).values()):
-            colour_layout(placed, overlay)
-            return overlay
+        if any(reading.has_data for reading in colouring.evaluate(racks, scope=scope, user=user).values()):
+            colour_layout(placed, colouring, scope=scope, user=user)
+            return colouring
     return None
 
 
@@ -228,7 +230,7 @@ class RackRow:
 
     The plan answers "where"; the table answers "which is fullest", "which has no feed", "which
     holds the most devices", which on the plan means hovering every cabinet in turn. Its figures
-    are the ones the overlays and the stat strip use, so the three cannot disagree.
+    are the ones the colourings and the stat strip use, so the three cannot disagree.
     """
 
     placed: PlacedRack
@@ -248,7 +250,7 @@ def rack_rows(placed: Sequence[PlacedRack]) -> list[RackRow]:
     The rows of the rack table, in natural name order.
 
     Costs nothing on a floor page: the space and power walks have already been made for the
-    overlay or the stat strip, and are reused.
+    colouring or the stat strip, and are reused.
     """
     racks = [p.rack for p in placed]
     space = floor_space_utilisation(racks)
@@ -274,10 +276,10 @@ def floor_summary(floor, placed: Sequence[PlacedRack]) -> list[Stat]:
     The headline figures for a floor, above the drawing.
 
     A plan answers "where"; these answer "how much", which is the question somebody usually
-    arrives with. They are deliberately the same four measures the overlays colour by, so the
+    arrives with. They are deliberately the same four measures the colourings colour by, so the
     strip and the plan are two readings of one set of facts rather than two sets.
 
-    The space and power walks are the bulk ones the overlays use, and where the overlay on show
+    The space and power walks are the bulk ones the colourings use, and where the colouring on show
     has already walked one of them for these racks its answer is reused rather than read again.
     """
     if not placed:

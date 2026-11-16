@@ -35,7 +35,7 @@ from django.db.models import Count, Q
 CABINET_SIZES = ((600, 1070), (600, 1200), (800, 1070), (800, 1200))
 
 # Cooling, weighted so most of a room is air and liquid is the exception, which is what makes
-# the overlay worth looking at: a uniform room says nothing.
+# the colouring worth looking at: a uniform room says nothing.
 COOLING = (
     ('air-only', 8, (3, 8)),
     ('hybrid', 3, (10, 20)),

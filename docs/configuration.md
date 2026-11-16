@@ -8,14 +8,14 @@ Every setting is optional. Set them under `PLUGINS_CONFIG['netbox_spatial_lens']
 | `default_rack_depth` | `1070` | Depth in millimetres used for a rack with no outer depth recorded. |
 | `grid_size` | `10` | Grid the layout editor snaps to, in centimetres. `0` turns snapping off. |
 | `filter_custom_fields` | `[]` | Custom fields to offer as filters, the way tags are: a list of field names. See [Filter by](extending.md#filter-by). |
-| `enable_builtin_overlays` | `True` | Floor colourings to offer: `True` for all, `False` for none, or a list from `'power'`, `'cooling'`, `'space'`, `'role'`, `'redundancy'`. |
-| `default_overlay` | `'power'` | Floor colouring used when the URL names none. |
-| `enable_builtin_device_overlays` | `True` | Rack colourings to offer: `True`, `False`, or a list from `'role'`, `'status'`, `'tenant'`, `'cabling'`, `'power'`, `'redundancy'`. |
-| `default_device_overlay` | `'role'` | Rack colouring used when the URL names none. |
-| `enable_builtin_site_overlays` | `True` | World map colourings to offer: `True`, `False`, or a list from `'group'`, `'status'`, `'tenant'`, `'region'`. |
-| `default_site_overlay` | `'group'` | World map colouring used when the URL names none. |
-| `enable_builtin_circuit_overlays` | `True` | Circuit colourings the world map offers: `True`, `False`, or a list from `'provider'`, `'type'`, `'status'`, `'tenant'`. |
-| `default_circuit_overlay` | `'provider'` | Circuit colouring used when the URL names none. |
+| `builtin_rack_colourings` | `True` | Built-in colourings of the racks on a floor: `True` for all, `False` for none, or a list from `'power'`, `'cooling'`, `'space'`, `'role'`, `'redundancy'`. |
+| `default_rack_colouring` | `'power'` | Floor colouring used when the URL names none. |
+| `builtin_device_colourings` | `True` | Built-in colourings of the devices in a rack: `True`, `False`, or a list from `'role'`, `'status'`, `'tenant'`, `'cabling'`, `'power'`, `'redundancy'`. |
+| `default_device_colouring` | `'role'` | Rack colouring used when the URL names none. |
+| `builtin_site_colourings` | `True` | Built-in colourings of the sites on the world map: `True`, `False`, or a list from `'group'`, `'status'`, `'tenant'`, `'region'`. |
+| `default_site_colouring` | `'group'` | Site colouring used when the URL names none. |
+| `builtin_circuit_colourings` | `True` | Built-in colourings of the circuits on the world map: `True`, `False`, or a list from `'provider'`, `'type'`, `'status'`, `'tenant'`. |
+| `default_circuit_colouring` | `'provider'` | Circuit colouring used when the URL names none. |
 | `map_tile_url` | OpenStreetMap tiles | Raster tile URL for the globe. `{theme}` in the URL becomes `light` or `dark`. `None` draws the globe with no basemap. |
 | `map_attribution` | OpenStreetMap credit | Credit shown on the map for the tiles. |
 | `map_js` | MapLibre 5.6.1 on cdnjs | Where the browser loads MapLibre from. Empty turns the world map off. |

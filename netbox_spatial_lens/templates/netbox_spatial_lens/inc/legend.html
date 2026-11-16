@@ -1,7 +1,7 @@
 {% comment %}
 A legend that doubles as a tally, and as a filter.
 
-Every entry carries how many fall in it, because the question being asked of an overlay is
+Every entry carries how many fall in it, because the question being asked of a colouring is
 usually "how many", not just "which colour means what". The no-data entry is counted the same
 way and is never dropped when it is empty: a legend that hides it teaches the reader that grey
 means nothing, and grey is the one colour that must keep meaning "not recorded".
@@ -44,7 +44,7 @@ rather than a control, which is what the cabling legend on the floor is.
   {% endfor %}
 
   {% comment %}
-  Reserved space is not one of the overlay's bands: it is a claim on empty units, drawn hatched
+  Reserved space is not one of the colouring's bands: it is a claim on empty units, drawn hatched
   rather than filled, and every colouring shows it. It still belongs in this list, because it is
   a colour on the drawing the reader has to be able to look up, and picking it out answers "what
   in this rack is spoken for" in one click.

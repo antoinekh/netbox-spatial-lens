@@ -16,11 +16,10 @@ from dcim.models import Device, Rack, Site
 from django.db.models import Count, Prefetch, Q
 from django.urls import reverse
 
-from netbox_spatial_lens.circuit_overlays import resolve_circuit_overlay
-from netbox_spatial_lens.overlays import NO_DATA_COLOUR as NO_DATA
-from netbox_spatial_lens.overlays import NO_DATA_KEY, LegendEntry, Stat
+from netbox_spatial_lens.colouring import NO_DATA_COLOUR as NO_DATA
+from netbox_spatial_lens.colouring import NO_DATA_KEY, LegendEntry, Level, registry
 from netbox_spatial_lens.palette import NODE
-from netbox_spatial_lens.site_overlays import resolve_site_overlay
+from netbox_spatial_lens.stats import Stat
 
 __all__ = (
     'WorldLink',
@@ -111,12 +110,13 @@ class WorldMap:
 
 def build_world(
     sites_queryset=None,
-    overlay=None,
+    colouring=None,
     circuits=None,
     racks=None,
     devices=None,
     provider_networks=None,
-    circuit_overlay=None,
+    circuit_colouring=None,
+    user=None,
 ) -> WorldMap:
     """
     Every geocoded site, and the circuits joining them.
@@ -129,7 +129,7 @@ def build_world(
     rather than of everything. Defaulting to every site keeps the function usable from a shell
     or a command, where there is no user to restrict against.
 
-    `overlay` is what the points are coloured by, and the site group when nothing is named. It
+    `colouring` is what the points are coloured by, and the site group when nothing is named. It
     is asked for the whole set at once, because a categorical colouring has to settle clashes
     between two names that hash to one colour, and that cannot be decided one site at a time.
 
@@ -165,8 +165,8 @@ def build_world(
     # the site group, else the first registered. A deployment that switches every colouring off
     # still gets a map: the points keep the plain site blue and the legend explains only the
     # provider networks.
-    overlay = overlay or resolve_site_overlay(None)
-    values = overlay.evaluate(sites) if overlay else {}
+    colouring = colouring or registry.resolve(Level.SITES, None)
+    values = colouring.evaluate(sites, user=user) if colouring else {}
 
     nodes = {}
     for site in sites:
@@ -183,7 +183,7 @@ def build_world(
             # the question at this zoom. The colouring answers it, and a site it cannot answer
             # for is grey and counted rather than quietly passed off as ordinary.
             colour=values[site.pk].colour if site.pk in values else SITE_COLOUR,
-            band=overlay.band_of(values[site.pk]) if site.pk in values else '',
+            band=values[site.pk].band if site.pk in values else '',
             # The site's Spatial Lens tab, which lists its racks and offers to add a floor. The view
             # replaces it with the room itself where the site has exactly one.
             url=reverse('dcim:site_lens', args=[site.pk]),
@@ -193,11 +193,11 @@ def build_world(
             lat=float(site.latitude),
             lon=float(site.longitude),
             status=site.get_status_display(),
-            facts=_site_facts(site, racks, device_counts.get(site.pk, 0), overlay, values.get(site.pk)),
+            facts=_site_facts(site, racks, device_counts.get(site.pk, 0), colouring, values.get(site.pk)),
         )
 
-    circuit_overlay = circuit_overlay or resolve_circuit_overlay(None)
-    links, circuit_values = _build_links(nodes, circuits, provider_networks, circuit_overlay)
+    circuit_colouring = circuit_colouring or registry.resolve(Level.CIRCUITS, None)
+    links, circuit_values = _build_links(nodes, circuits, provider_networks, circuit_colouring, user)
     for link in links:
         link.a.link_count += 1
         link.z.link_count += 1
@@ -208,11 +208,11 @@ def build_world(
         nodes=list(nodes.values()),
         links=links,
         ungeocoded=ungeocoded,
-        legend=_world_legend(overlay, values, providers),
+        legend=_world_legend(colouring, values, providers),
         stats=_world_stats(sites, sum(rack_counts.values()), sum(device_counts.values()), links, ungeocoded, providers),
         # Over the circuits drawn, not every circuit in the database: a legend on this map
         # explains this map.
-        circuit_legend=circuit_overlay.legend_for(circuit_values.values()) if circuit_overlay and links else [],
+        circuit_legend=circuit_colouring.legend(circuit_values.values()) if circuit_colouring and links else [],
     )
 
 
@@ -229,7 +229,7 @@ def _count_by_site(queryset, site_ids: Sequence[int]) -> dict[int, int]:
     )
 
 
-def _world_legend(overlay, values: Mapping, providers: int) -> list[LegendEntry]:
+def _world_legend(colouring, values: Mapping, providers: int) -> list[LegendEntry]:
     """
     What the colours on the map mean, and how many points are in each.
 
@@ -242,7 +242,7 @@ def _world_legend(overlay, values: Mapping, providers: int) -> list[LegendEntry]
     sites is a map you cannot trust the other eight of, so the band for sites the colouring
     could not answer for is counted and kept even when it is empty.
     """
-    entries = overlay.legend_for(values.values()) if overlay else []
+    entries = colouring.legend(values.values()) if colouring else []
     if providers:
         entries.append(LegendEntry(PROVIDER_COLOUR, 'Provider network', providers, key=PROVIDER_KEY))
     return entries
@@ -267,7 +267,7 @@ def _rate(kbps: float) -> str:
     return f'{kbps:g} kbps'
 
 
-def _link_facts(circuit, overlay=None, value=None) -> list[tuple[str, str]]:
+def _link_facts(circuit, colouring=None, value=None) -> list[tuple[str, str]]:
     """
     The lines under a circuit's name on hover, by the same rules as a site's: only what is
     recorded, and the colouring's reading first unless a line below already says it.
@@ -277,10 +277,11 @@ def _link_facts(circuit, overlay=None, value=None) -> list[tuple[str, str]]:
         facts.append(('Tenant', str(circuit.tenant)))
     if circuit.commit_rate:
         facts.append(('Commit rate', _rate(circuit.commit_rate)))
-    if overlay is not None and value is not None and value.has_data:
+    if colouring is not None and value is not None and value.has_data:
         said = {text for _, text in facts} | {circuit.get_status_display()}
         if value.label not in said:
-            facts.insert(0, (overlay.label, value.label))
+            facts.insert(0, (colouring.label, value.label))
+        facts.extend(value.facts)
     return facts
 
 
@@ -334,7 +335,7 @@ def _world_stats(
     return stats
 
 
-def _site_facts(site, racks: int, devices: int, overlay=None, value=None) -> list[tuple[str, str]]:
+def _site_facts(site, racks: int, devices: int, colouring=None, value=None) -> list[tuple[str, str]]:
     """
     The lines under a site's name on hover.
 
@@ -345,8 +346,8 @@ def _site_facts(site, racks: int, devices: int, overlay=None, value=None) -> lis
     already says it: coloured by group, the group is on its own line, and the status is the badge.
     """
     facts = []
-    if overlay is not None and value is not None and value.has_data:
-        facts.append((overlay.label, value.label))
+    if colouring is not None and value is not None and value.has_data:
+        facts.append((colouring.label, value.label))
     if site.region:
         facts.append(('Region', str(site.region)))
     if site.group:
@@ -362,6 +363,7 @@ def _site_facts(site, racks: int, devices: int, overlay=None, value=None) -> lis
         said = {text for _, text in facts[1:]} | {site.get_status_display()}
         if value.label in said:
             facts.pop(0)
+        facts.extend(value.facts)
     return facts
 
 
@@ -383,9 +385,11 @@ def _endpoint_key(termination) -> tuple[str | None, str | None, str | None]:
     return None, None, None
 
 
-def _build_links(nodes: dict, circuits=None, provider_networks=None, overlay=None) -> tuple[list[WorldLink], dict]:
+def _build_links(
+    nodes: dict, circuits=None, provider_networks=None, colouring=None, user=None
+) -> tuple[list[WorldLink], dict]:
     """
-    Circuits with both ends resolvable, drawn between their endpoints, and what `overlay` says
+    Circuits with both ends resolvable, drawn between their endpoints, and what `colouring` says
     of each, by circuit id.
 
     A provider network is given a position of its own: the centre of the sites reaching it.
@@ -461,7 +465,7 @@ def _build_links(nodes: dict, circuits=None, provider_networks=None, overlay=Non
     # Coloured over the circuits drawn and no others, so the legend cannot name a colour that
     # nothing on the map wears.
     drawn = [(circuit, a_key, z_key) for circuit, a_key, z_key in pending if a_key in nodes and z_key in nodes]
-    values = overlay.evaluate([circuit for circuit, _, _ in drawn]) if overlay else {}
+    values = colouring.evaluate([circuit for circuit, _, _ in drawn], user=user) if colouring else {}
 
     links = []
     for circuit, a_key, z_key in drawn:
@@ -478,8 +482,8 @@ def _build_links(nodes: dict, circuits=None, provider_networks=None, overlay=Non
                 width=_link_width(circuit),
                 label=label,
                 colour=value.colour if value is not None else NO_DATA,
-                band=overlay.band_of(value) if value is not None else NO_DATA_KEY,
-                facts=_link_facts(circuit, overlay, value),
+                band=value.band if value is not None else NO_DATA_KEY,
+                facts=_link_facts(circuit, colouring, value),
             )
         )
     return links, values

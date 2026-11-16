@@ -378,7 +378,7 @@
   color: var(--lens-muted);
 }
 
-/* What the overlay currently says about this rack, above the facts that do not change with it.
+/* What the colouring currently says about this rack, above the facts that do not change with it.
    The swatch ties the sentence to the box under the cursor. */
 .lens-card__reading {
   display: flex;
@@ -696,7 +696,7 @@ a.lens-card__action:hover {
   fill-opacity: .3;
 }
 
-/* Dashed rather than merely grey: a rack the overlay knows nothing about must not be mistaken
+/* Dashed rather than merely grey: a rack the colouring knows nothing about must not be mistaken
    for one it has measured and found unremarkable. */
 .lens-rack--nodata .lens-rack-body {
   stroke-dasharray: 10 6;

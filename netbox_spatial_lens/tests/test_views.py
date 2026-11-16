@@ -3,7 +3,6 @@ The pages render, and they tell the truth about what they could not answer.
 """
 
 import copy
-from unittest import mock
 
 from dcim.models import Site
 from django.conf import settings
@@ -14,10 +13,9 @@ from django.urls import reverse
 from users.models import User
 from utilities.testing import create_test_user
 
+from netbox_spatial_lens.colouring import Colouring, Level, Reading, registry
 from netbox_spatial_lens.models import Floor
-from netbox_spatial_lens.overlays import RackValue
 from netbox_spatial_lens.palette import NO_DATA, categorical_colour, distinct_colours
-from netbox_spatial_lens.site_overlays import SiteOverlay, get_site_overlay, get_site_overlays
 from netbox_spatial_lens.tests.base import (
     LensTestCase,
     cable,
@@ -52,7 +50,7 @@ class FloorViewTest(ViewTestCase):
         self.assertContains(response, 'lens-floor')
 
     def test_the_exported_image_is_named_after_the_site_the_floor_and_the_colouring(self):
-        response = self.client.get(self.floor.get_absolute_url(), {'overlay': 'space'})
+        response = self.client.get(self.floor.get_absolute_url(), {'colour': 'space'})
         self.assertContains(response, f'data-lens-title="{self.site.name} / {self.floor.name}"')
         self.assertContains(response, 'data-lens-colouring="Space"')
 
@@ -70,41 +68,41 @@ class FloorViewTest(ViewTestCase):
         response = self.client.get(floor.get_absolute_url())
         self.assertContains(response, self.site.name)
 
-    def test_an_unknown_overlay_falls_back_rather_than_failing(self):
-        # A link carrying an overlay a later release removed should still open the floor.
-        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=no-such-thing')
+    def test_an_unknown_colouring_falls_back_rather_than_failing(self):
+        # A link carrying a colouring a later release removed should still open the floor.
+        response = self.client.get(f'{self.floor.get_absolute_url()}?colour=no-such-thing')
         self.assertEqual(response.status_code, 200)
 
     def test_a_floor_with_no_data_says_so(self):
         # The honesty rule: a room of grey must read as "nobody recorded this", never as a
         # clean bill of health. The count sits in the legend beside the grey swatch.
-        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=cooling')
+        response = self.client.get(f'{self.floor.get_absolute_url()}?colour=cooling')
         self.assertContains(response, 'No data')
         self.assertContains(response, 'lens-legend__count')
 
     def test_the_no_data_band_is_listed_only_when_a_rack_falls_in_it(self):
-        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=space')
+        response = self.client.get(f'{self.floor.get_absolute_url()}?colour=space')
         self.assertNotContains(response, 'data-lens-band="lens:no-data"')
-        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=cooling')
+        response = self.client.get(f'{self.floor.get_absolute_url()}?colour=cooling')
         self.assertContains(response, 'data-lens-band="lens:no-data"')
 
     def test_a_default_colouring_with_no_data_gives_way_to_one_that_has_some(self):
         # The rack has no feed, so Power, the default, has nothing to say; it has a height, so
         # Space does.
         response = self.client.get(self.floor.get_absolute_url())
-        self.assertEqual(response.context['overlay'].name, 'space')
+        self.assertEqual(response.context['colouring'].name, 'space')
         self.assertTrue(all(p.has_data for p in response.context['placed_racks']))
         self.assertContains(response, 'Power has no data on this floor.')
 
     def test_a_colouring_the_reader_named_is_kept_even_with_no_data(self):
-        response = self.client.get(f'{self.floor.get_absolute_url()}?overlay=power')
-        self.assertEqual(response.context['overlay'].name, 'power')
+        response = self.client.get(f'{self.floor.get_absolute_url()}?colour=power')
+        self.assertEqual(response.context['colouring'].name, 'power')
         self.assertNotContains(response, 'has no data on this floor.')
 
     def test_a_default_colouring_with_data_is_kept(self):
         power_feed(self.rack)
         response = self.client.get(self.floor.get_absolute_url())
-        self.assertEqual(response.context['overlay'].name, 'power')
+        self.assertEqual(response.context['colouring'].name, 'power')
 
     def test_the_floor_counts_the_racks_not_yet_placed(self):
         make_rack(self.site, name='R2')
@@ -394,8 +392,8 @@ class WorldViewTest(ViewTestCase):
         self.site.latitude, self.site.longitude = 51.5, -0.12
         self.site.save()
         response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
-        for overlay in get_site_overlays():
-            self.assertContains(response, f'?overlay={overlay.name}')
+        for colouring in registry.all(Level.SITES):
+            self.assertContains(response, f'?sites={colouring.name}')
 
     def test_the_finders_carry_every_site_and_a_way_to_filter_them(self):
         # The lists are behind a button now, so the page must still hold every row: the filter
@@ -412,40 +410,41 @@ class WorldViewTest(ViewTestCase):
         self.site.latitude, self.site.longitude = 51.5, -0.12
         self.site.status = 'planned'
         self.site.save()
-        response = self.client.get(f'{reverse("plugins:netbox_spatial_lens:world")}?overlay=status')
-        self.assertEqual(response.context['overlay'].name, 'status')
+        response = self.client.get(f'{reverse("plugins:netbox_spatial_lens:world")}?sites=status')
+        self.assertEqual(response.context['colouring'].name, 'status')
         self.assertContains(response, self.site.get_status_display())
 
     def test_an_unknown_colouring_falls_back_rather_than_failing(self):
         # A link carrying a colouring a later release removed should still open the map.
         self.site.latitude, self.site.longitude = 51.5, -0.12
         self.site.save()
-        response = self.client.get(f'{reverse("plugins:netbox_spatial_lens:world")}?overlay=no-such-thing')
+        response = self.client.get(f'{reverse("plugins:netbox_spatial_lens:world")}?sites=no-such-thing')
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['overlay'].name, 'group')
+        self.assertEqual(response.context['colouring'].name, 'group')
 
     def test_a_default_no_colouring_answers_to_falls_back_to_the_first_registered(self):
         # The map used to fall back to the group inside the builder only, so it was drawn by
         # group while the page named no colouring and no button was active.
         config = copy.deepcopy(settings.PLUGINS_CONFIG)
-        config['netbox_spatial_lens']['default_site_overlay'] = 'no-such-default'
+        config['netbox_spatial_lens']['default_site_colouring'] = 'no-such-default'
         with override_settings(PLUGINS_CONFIG=config):
             response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
-        self.assertEqual(response.context['overlay'].name, get_site_overlays()[0].name)
+        self.assertEqual(response.context['colouring'].name, registry.all(Level.SITES)[0].name)
 
     def test_with_the_default_colouring_switched_off_the_map_uses_the_first_left(self):
-        # `enable_builtin_site_overlays: ['status']` with the default left at 'group': the map
-        # used to be drawn by nothing while Status sat on the toolbar.
-        from netbox_spatial_lens import site_overlays
-
+        # `builtin_site_colourings: ['status']` with the default left at 'group': the map used to
+        # be drawn by nothing while Status sat on the toolbar.
         self.site.latitude, self.site.longitude = 51.5, -0.12
         self.site.status = 'planned'
         self.site.save()
-        with mock.patch.dict(site_overlays.registry._items, clear=True):
-            site_overlays.register_builtin_site_overlays(['status'])
+        config = copy.deepcopy(settings.PLUGINS_CONFIG)
+        config['netbox_spatial_lens']['builtin_site_colourings'] = ['status']
+        self.addCleanup(registry.reload)
+        with override_settings(PLUGINS_CONFIG=config):
+            registry.reload()
             response = self.client.get(reverse('plugins:netbox_spatial_lens:world'))
             node = next(n for n in build_world().nodes if n.object_id == self.site.pk)
-        self.assertEqual(response.context['overlay'].name, 'status')
+        self.assertEqual(response.context['colouring'].name, 'status')
         self.assertEqual(node.band, self.site.get_status_display())
 
 
@@ -603,17 +602,20 @@ class WorldColouringTest(LensTestCase):
     def test_the_hover_card_names_what_the_colouring_says(self):
         site = Site.objects.create(name='Owned', slug='owned', latitude=51.5, longitude=-0.1)
 
-        def owner(sites):
-            return {s.pk: RackValue('#3f7fbf', 'Paid by Acme', 'acme') for s in sites}
+        def owner(sites, context):
+            return {s.pk: Reading('Paid by Acme', facts=[('Contract', 'C-42')]) for s in sites}
 
-        world = build_world(overlay=SiteOverlay('owner', 'Owner', owner))
+        world = build_world(colouring=Colouring(Level.SITES, 'owner', 'Owner', owner))
         node = next(n for n in world.nodes if n.object_id == site.pk)
         self.assertEqual(node.facts[0], ('Owner', 'Paid by Acme'))
+        # A reading may add lines of its own to the card.
+        self.assertIn(('Contract', 'C-42'), node.facts)
 
     def test_coloured_by_status_the_status_is_not_named_twice(self):
         # The status is the card's badge already.
         site = Site.objects.create(name='Live', slug='live', latitude=51.5, longitude=-0.1)
-        node = next(n for n in build_world(overlay=get_site_overlay('status')).nodes if n.object_id == site.pk)
+        world = build_world(colouring=registry.get(Level.SITES, 'status'))
+        node = next(n for n in world.nodes if n.object_id == site.pk)
         self.assertNotIn(('Status', site.get_status_display()), node.facts)
 
     def test_coloured_by_group_the_group_is_not_named_twice(self):
@@ -621,18 +623,19 @@ class WorldColouringTest(LensTestCase):
 
         group = SiteGroup.objects.create(name='Europe', slug='europe')
         site = Site.objects.create(name='Grouped', slug='grouped', group=group, latitude=51.5, longitude=-0.1)
-        node = next(n for n in build_world(overlay=get_site_overlay('group')).nodes if n.object_id == site.pk)
+        world = build_world(colouring=registry.get(Level.SITES, 'group'))
+        node = next(n for n in world.nodes if n.object_id == site.pk)
         self.assertEqual([fact for fact in node.facts if fact[1] == 'Europe'], [('Group', 'Europe')])
 
     def test_the_map_colours_by_the_colouring_it_is_given(self):
         site = Site.objects.create(name='Planned', slug='planned', status='planned', latitude=51.5, longitude=-0.1)
-        world = build_world(overlay=get_site_overlay('status'))
+        world = build_world(colouring=registry.get(Level.SITES, 'status'))
         node = next(n for n in world.nodes if n.object_id == site.pk)
         self.assertEqual(node.band, site.get_status_display())
 
     def test_a_site_the_colouring_cannot_answer_for_is_grey_and_counted(self):
         Site.objects.create(name='Loose', slug='loose', latitude=51.5, longitude=-0.1)
-        world = build_world(overlay=get_site_overlay('tenant'))
+        world = build_world(colouring=registry.get(Level.SITES, 'tenant'))
         entry = next(e for e in world.legend if e.label == 'No data')
         self.assertEqual(entry.count, 1)
         self.assertEqual(entry.colour, NO_DATA)
@@ -669,7 +672,7 @@ class WorldColouringTest(LensTestCase):
                 latitude=40 + index,
                 longitude=index,
             )
-        legend = build_world(overlay=get_site_overlay('region')).legend
+        legend = build_world(colouring=registry.get(Level.SITES, 'region')).legend
         colours = [e.colour for e in legend]
         self.assertEqual(len(set(colours)), len(colours))
 
@@ -679,12 +682,12 @@ class WorldColouringTest(LensTestCase):
         group = SiteGroup.objects.create(name='Europe', slug='europe')
         Site.objects.create(name='A', slug='a', group=group, latitude=51.5, longitude=-0.1)
         Site.objects.create(name='B', slug='b', latitude=48.9, longitude=2.3)
-        for overlay in get_site_overlays():
-            world = build_world(overlay=overlay)
+        for colouring in registry.all(Level.SITES):
+            world = build_world(colouring=colouring)
             self.assertEqual(
                 sum(e.count for e in world.legend),
                 len(world.site_nodes),
-                f'the {overlay.name} legend loses a site',
+                f'the {colouring.name} legend loses a site',
             )
 
 
@@ -723,38 +726,32 @@ class WorldCircuitTest(LensTestCase):
         self.assertEqual(link.colour, distinct_colours(['Level 3'])['Level 3'])
 
     def test_a_circuit_coloured_by_status_falls_in_the_band_of_its_status(self):
-        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
-
         live = self.circuit('CID-1', 'Level 3')
         planned = self.circuit('CID-2', 'Level 3')
         planned.status = 'planned'
         planned.save()
-        world = build_world(circuit_overlay=get_circuit_overlay('status'))
+        world = build_world(circuit_colouring=registry.get(Level.CIRCUITS, 'status'))
         bands = {link.circuit.cid: link.band for link in world.links}
         self.assertEqual(bands, {'CID-1': live.get_status_display(), 'CID-2': 'Planned'})
         self.assertEqual({e.label: e.count for e in world.circuit_legend if e.count}, {'Active': 1, 'Planned': 1})
 
     def test_a_circuit_coloured_by_type_wears_the_colour_of_its_type(self):
-        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
-
         circuit = self.circuit('CID-1', 'Level 3')
         circuit.type.color = 'ff0000'
         circuit.type.save()
-        link = build_world(circuit_overlay=get_circuit_overlay('type')).links[0]
+        link = build_world(circuit_colouring=registry.get(Level.CIRCUITS, 'type')).links[0]
         self.assertEqual(link.colour, '#ff0000')
         # The hover card names the reading, which the label does not already say.
         self.assertEqual(link.label, 'CID-1 · Level 3 · Transit')
 
     def test_the_card_of_a_circuit_lists_what_is_recorded_and_does_not_repeat_the_reading(self):
-        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
-
         circuit = self.circuit('CID-1', 'Level 3')
         circuit.commit_rate = 10_000_000
         circuit.save()
         by_provider = build_world().links[0]
         self.assertEqual(by_provider.facts, [('Provider', 'Level 3'), ('Type', 'Transit'), ('Commit rate', '10 Gbps')])
         # The status is the badge of the card, so the status colouring adds no line for it.
-        by_status = build_world(circuit_overlay=get_circuit_overlay('status')).links[0]
+        by_status = build_world(circuit_colouring=registry.get(Level.CIRCUITS, 'status')).links[0]
         self.assertEqual(by_status.facts, by_provider.facts)
 
     def test_the_page_gives_the_map_the_way_into_each_circuit(self):
@@ -768,10 +765,8 @@ class WorldCircuitTest(LensTestCase):
         self.assertEqual((link['cid'], link['url'], link['status']), ('CID-1', circuit.get_absolute_url(), 'Active'))
 
     def test_a_circuit_with_no_tenant_is_no_data_by_tenant(self):
-        from netbox_spatial_lens.circuit_overlays import get_circuit_overlay
-
         self.circuit('CID-1', 'Level 3')
-        world = build_world(circuit_overlay=get_circuit_overlay('tenant'))
+        world = build_world(circuit_colouring=registry.get(Level.CIRCUITS, 'tenant'))
         self.assertEqual(world.links[0].colour, NO_DATA)
         self.assertEqual(world.links[0].band, 'lens:no-data')
 
@@ -782,11 +777,11 @@ class WorldCircuitTest(LensTestCase):
         user.save()
         self.client.force_login(user)
         url = reverse('plugins:netbox_spatial_lens:world')
-        response = self.client.get(url, {'overlay': 'status', 'circuits': 'type'})
+        response = self.client.get(url, {'sites': 'status', 'circuits': 'type'})
         self.assertContains(response, 'Circuits by type')
         for name in ('provider', 'type', 'status', 'tenant'):
-            self.assertContains(response, f'?overlay=status&amp;circuits={name}')
-        self.assertContains(response, '?overlay=group&amp;circuits=type')
+            self.assertContains(response, f'?sites=status&amp;circuits={name}')
+        self.assertContains(response, '?sites=group&amp;circuits=type')
 
     def test_two_providers_are_two_bands(self):
         self.circuit('CID-1', 'Level 3')

@@ -22,8 +22,7 @@ from utilities.views import ViewTab, register_model_view
 
 from netbox_spatial_lens import filtersets, forms, tables
 from netbox_spatial_lens.cabling import kind_legend
-from netbox_spatial_lens.circuit_overlays import get_circuit_overlays, resolve_circuit_overlay
-from netbox_spatial_lens.device_overlays import get_device_overlays, resolve_device_overlay
+from netbox_spatial_lens.colouring import Level, registry
 from netbox_spatial_lens.elevation import build_elevation, rack_summary
 from netbox_spatial_lens.field_filters import cells_for, field_filters
 from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs, cabling_facts, cabling_legend
@@ -35,11 +34,9 @@ from netbox_spatial_lens.layout import (
     first_colouring_with_data,
     floor_summary,
     rack_rows,
-    resolve_overlay,
     unplaced_racks,
 )
 from netbox_spatial_lens.models import CM_PER_UNIT, Floor, FloorLayer, RackPlacement
-from netbox_spatial_lens.overlays import get_overlay, get_overlays
 from netbox_spatial_lens.palette import (
     HIGHLIGHT,
     HIGHLIGHT_DARK,
@@ -51,7 +48,6 @@ from netbox_spatial_lens.palette import (
 )
 from netbox_spatial_lens.ports import rack_allocation
 from netbox_spatial_lens.scene import build_scene
-from netbox_spatial_lens.site_overlays import get_site_overlays, resolve_site_overlay
 from netbox_spatial_lens.tags import tags_in_use
 from netbox_spatial_lens.templatetags.lens import lens_static
 from netbox_spatial_lens.tracing import trace_from
@@ -130,29 +126,32 @@ class FloorView(generic.ObjectView):
     template_name = 'netbox_spatial_lens/floor.html'
 
     def get_extra_context(self, request, instance):
-        overlay = resolve_overlay(request.GET.get('overlay'))
+        named = request.GET.get('colour')
+        colouring = registry.resolve(Level.RACKS, named)
         # Only the racks the reader may open. A placement is the plugin's own object and
         # NetBox will show it; the cabinet on the other end of it is not.
         racks = Rack.objects.restrict(request.user, 'view')
         devices = Device.objects.restrict(request.user, 'view')
-        placed = build_layout(instance, overlay, racks=racks, devices=devices)
+        placed = build_layout(instance, colouring, racks=racks, devices=devices, user=request.user)
         # The colouring the reader did not choose and that has no data here gives way to the
         # first one that has some, and the page says which one stood aside.
-        silent_overlay = None
-        if placed and get_overlay(request.GET.get('overlay')) is None and not any(p.has_data for p in placed):
-            fallback = first_colouring_with_data(placed, get_overlays(), tried=overlay)
+        silent_colouring = None
+        if placed and registry.get(Level.RACKS, named) is None and not any(p.has_data for p in placed):
+            fallback = first_colouring_with_data(
+                placed, registry.all(Level.RACKS), tried=colouring, scope=instance, user=request.user
+            )
             if fallback:
-                silent_overlay, overlay = overlay, fallback
+                silent_colouring, colouring = colouring, fallback
         # Custom fields offered as filters, like tags: each rack carries its values for the
         # finder and the table, and names them in its hover card.
         filters = field_filters((p.rack for p in placed), Rack)
         for p in placed:
             p.field_cells = cells_for(filters, p.rack)
-            p.facts.extend((cell.filter.label, cell.sort_value) for cell in p.field_cells if cell.values)
+            p.rack_facts.extend((cell.filter.label, cell.sort_value) for cell in p.field_cells if cell.values)
         view = floor_viewport(instance)
         step = int(view.step / 100)
         # Off by default: the runs are the answer to a specific question, and drawn over a
-        # busy room unasked they are noise across every other overlay.
+        # busy room unasked they are noise across every other colouring.
         show_runs = request.GET.get('runs') == '1'
         runs = build_floor_runs(placed) if show_runs else []
         # Drawn under the same toggle: a room whose only cabling leaves the building would
@@ -161,7 +160,7 @@ class FloorView(generic.ObjectView):
         cabled = cabling_facts(runs, exits)
         for p in placed:
             if p.rack.pk in cabled:
-                p.facts.append(('Cabling', cabled[p.rack.pk]))
+                p.rack_facts.append(('Cabling', cabled[p.rack.pk]))
         stage = three_stage()
         return {
             'three_imports': stage.imports,
@@ -172,15 +171,15 @@ class FloorView(generic.ObjectView):
                 'devicesUrl': reverse('plugins-api:netbox_spatial_lens-api:floor-devices', args=[instance.pk]),
                 'colours': {'highlight': HIGHLIGHT, 'highlightDark': HIGHLIGHT_DARK},
             },
-            'overlays': get_overlays(),
-            'overlay': overlay,
-            'silent_overlay': silent_overlay,
+            'colourings': registry.all(Level.RACKS),
+            'colouring': colouring,
+            'silent_colouring': silent_colouring,
             'stats': floor_summary(instance, placed),
             # The scale, so the plan is a drawing rather than a picture of one.
             'view': view,
             'x_ticks': metre_ticks(instance.width_cm, step),
             'y_ticks': metre_ticks(instance.depth_cm, step),
-            'legend': overlay.legend_for([p.value for p in placed]) if overlay else [],
+            'legend': colouring.legend(p.value for p in placed) if colouring else [],
             'placed_racks': placed,
             'rack_rows': rack_rows(placed),
             'rack_tags': tags_in_use(p.rack for p in placed),
@@ -309,8 +308,8 @@ class SiteLensView(generic.ObjectView):
         # page is an index of plans rather than a table of names. Read for every room at once,
         # with space and power measured once for the summaries, so a site of many rooms costs
         # what a site of one does.
-        overlay = resolve_overlay(request.GET.get('overlay'))
-        layouts = build_layouts(floors, overlay, racks=racks, devices=devices, measure=True)
+        colouring = registry.resolve(Level.RACKS, request.GET.get('colour'))
+        layouts = build_layouts(floors, colouring, racks=racks, devices=devices, measure=True, user=request.user)
         rooms = []
         for floor in floors:
             placed = layouts[floor.pk]
@@ -332,8 +331,8 @@ class SiteLensView(generic.ObjectView):
         # picture and therefore from the tally too.
         return {
             'rooms': rooms,
-            'overlay': overlay,
-            'overlays': get_overlays(),
+            'colouring': colouring,
+            'colourings': registry.all(Level.RACKS),
             'unplaced': list(racks.filter(lens_placement__isnull=True).order_by('name')),
         }
 
@@ -359,21 +358,24 @@ class RackLensView(generic.ObjectView):
 
         # How the devices are coloured, chosen in the URL so a coloured rack is a link
         # somebody can send. An unknown name falls back rather than failing, the same way an
-        # unknown floor overlay does.
-        overlays = get_device_overlays()
-        overlay = resolve_device_overlay(request.GET.get('colour'))
+        # unknown floor colouring does.
+        colourings = registry.all(Level.DEVICES)
+        colouring = registry.resolve(Level.DEVICES, request.GET.get('colour'))
         # Custom fields offered as filters, like tags.
         filters = field_filters((m.device for m in devices), Device)
         for mounted in devices:
             mounted.field_cells = cells_for(filters, mounted.device)
-        if overlay:
-            values = overlay.evaluate(devices)
+        if colouring:
+            readings = colouring.evaluate(
+                [mounted.device for mounted in devices],
+                user=request.user,
+                scope=instance,
+                mounted={mounted.device.pk: mounted for mounted in devices},
+            )
             for mounted in devices:
-                value = values.get(mounted.device.pk)
-                if value is not None:
-                    mounted.colour = value.colour
-                    mounted.value = value
-                    mounted.band = overlay.band_of(value)
+                mounted.value = readings[mounted.device.pk]
+                mounted.colour = mounted.value.colour
+                mounted.band = mounted.value.band
         placement = RackPlacement.objects.filter(rack=instance).select_related('floor').first()
         # Each device's own cabling, rendered up front so selecting one costs no request, the
         # same way the allocation panel works. A run is listed under both of its ends, because
@@ -391,9 +393,9 @@ class RackLensView(generic.ObjectView):
             'device_tags': tags_in_use(m.device for m in devices),
             'field_filters': filters,
             'stats': rack_summary(elevation),
-            'device_overlays': overlays,
-            'device_overlay': overlay,
-            'device_legend': (overlay.legend_for([m.value for m in devices if m.value]) if overlay else []),
+            'device_colourings': colourings,
+            'device_colouring': colouring,
+            'device_legend': colouring.legend(m.value for m in devices) if colouring else [],
             'runs_by_device': [(mounted, runs_by_device.get(mounted.device.pk, [])) for mounted in devices],
             # The way back up to the floor this rack stands on, so the two views are a
             # round trip rather than a one-way link.
@@ -438,12 +440,13 @@ class WorldView(generic.ObjectListView):
         # An unknown name falls back rather than failing: a shared link carrying a colouring a
         # later release removed should still open the map, which is how the floor behaves too.
         # Resolved once, here, so the map and the toolbar name the same colouring.
-        overlay = resolve_site_overlay(request.GET.get('overlay'))
-        circuit_overlay = resolve_circuit_overlay(request.GET.get('circuits'))
+        colouring = registry.resolve(Level.SITES, request.GET.get('sites'))
+        circuit_colouring = registry.resolve(Level.CIRCUITS, request.GET.get('circuits'))
         world = build_world(
             self.queryset,
-            overlay=overlay,
-            circuit_overlay=circuit_overlay,
+            colouring=colouring,
+            circuit_colouring=circuit_colouring,
+            user=request.user,
             # Restricted like the sites are: the map must not become a way to read circuits a
             # user may not open anywhere else in NetBox.
             circuits=Circuit.objects.restrict(request.user, 'view'),
@@ -478,10 +481,10 @@ class WorldView(generic.ObjectListView):
             {
                 'world': world,
                 'model': Site,
-                'overlay': overlay,
-                'overlays': get_site_overlays(),
-                'circuit_overlay': circuit_overlay,
-                'circuit_overlays': get_circuit_overlays(),
+                'colouring': colouring,
+                'colourings': registry.all(Level.SITES),
+                'circuit_colouring': circuit_colouring,
+                'circuit_colourings': registry.all(Level.CIRCUITS),
                 # Handed to the page as data rather than baked into the script, so a
                 # deployment can point at its own tile server or its own copy of MapLibre.
                 #

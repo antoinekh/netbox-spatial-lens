@@ -4,7 +4,7 @@ Three ways to build on the plugin.
 
 | Extension | How | Where it applies |
 |---|---|---|
-| [Colour by](#colour-by) | Code: register a function from your plugin's `ready()` | Floor, rack view, world map |
+| [Colour by](#colour-by) | Code: one module in your plugin, found by itself | Floor, rack view, world map |
 | [Filter by](#filter-by) | Configuration: name custom fields in `filter_custom_fields` | Floor, rack view |
 | [Read a floor through the REST API](#read-a-floor-through-the-rest-api) | HTTP: two read-only endpoints | A floor |
 
@@ -12,173 +12,221 @@ Colourings and filters act on the same drawing. [How they combine](#how-colourin
 
 ## Colour by
 
-Each level has a registry of colourings. The buttons above each drawing list what is registered.
+A colouring is a function that says something about each item of a drawing: a rack, a device, a site or a circuit. The plugin draws the answer: the colour, the legend with its counts, the filter, the hover card and the gauge.
 
-| Level | Register with | The function gets | URL parameter |
+### Where the code goes
+
+Put your colourings in a module named `spatial_lens` in your plugin, or in any installed Django app:
+
+```text
+yourplugin/
+├── __init__.py
+└── spatial_lens.py
+```
+
+The plugin imports that module by itself the first time it needs a colouring. There is nothing to call from `ready()`, and the order of `PLUGINS` does not matter.
+
+Import from `netbox_spatial_lens.extend` and from nowhere else in the plugin. See [What stays stable](#what-stays-stable).
+
+### The levels
+
+A colouring belongs to one level: the set of things it colours.
+
+| Level | The function gets | `context.scope` | URL parameter |
 |---|---|---|---|
-| Floor | `netbox_spatial_lens.overlays.register_overlay` | The racks on one floor, as `Rack` objects with role, location, tenant and tags loaded | `?overlay=` |
-| Rack view | `netbox_spatial_lens.device_overlays.register_device_overlay` | The mounted devices. Each has `.device` (with role, device type, tenant and tags loaded), `.port_count`, `.connected_count` and `.power` (`allocated_watts` and `maximum_watts`, or `None`). | `?colour=` |
-| World map | `netbox_spatial_lens.site_overlays.register_site_overlay` | The sites on the map, as `Site` objects with region, group and tenant loaded | `?overlay=` |
-| World map, circuits | `netbox_spatial_lens.circuit_overlays.register_circuit_overlay` | The circuits drawn on the map, as `Circuit` objects with provider, type and tenant loaded | `?circuits=` |
+| `Level.RACKS` | The racks on one floor, as `Rack` objects with role, location, tenant and tags loaded | The `Floor` | `?colour=` on the floor and on the site page |
+| `Level.DEVICES` | The devices mounted in one rack, as `Device` objects with role, device type, tenant and tags loaded | The `Rack` | `?colour=` on the rack view |
+| `Level.SITES` | The sites on the world map, as `Site` objects with region, group and tenant loaded | `None` | `?sites=` |
+| `Level.CIRCUITS` | The circuits drawn on the world map, as `Circuit` objects with provider, type and tenant loaded | `None` | `?circuits=` |
 
-All four take the same arguments: `register_…(name, label, fn, description='', legend=None)`.
+### The function
 
-- `name` goes in the URL, so keep it stable.
+```python
+@colouring(level, name, label=..., description='', bands=())
+def fn(items, context):
+    return {item.pk: Reading(...), ...}
+```
+
+- `name` goes in the URL and in shared links, so keep it stable.
 - `label` is the button text, and `description` its tooltip.
-- `fn` gets the whole set at once, not one item at a time. Read what you need in one query for the set, not one query per item. Custom field data is already on each item, so reading it costs no query.
+- The function gets the whole set at once, not one item at a time. Read what you need in one query for the set, not one query per item. Custom field data is already on each item, so reading it costs no query.
+- It returns a dictionary from each item's primary key to a `Reading`.
+- An item that is not in the dictionary is **no data**: it is drawn grey and counted under **No data**. Zero is data; "nobody recorded it" is not.
+- If the function raises, the error is logged and every item is no data. The page still opens.
 
-### What the function returns
+### A reading
 
-A dictionary from each item's primary key to a `netbox_spatial_lens.overlays.RackValue(colour, label, value)`. On the rack view, the key is the device's primary key (`mounted.device.pk`).
+`Reading(label, band='', colour='', gauge=None, facts=())`
 
-- `colour`: a hex colour such as `'#4c9f70'`. `netbox_spatial_lens.palette` holds the plugin's own colours; use them, so your colouring reads like the built-in ones.
-- `label`: the reading. It is shown in the item's hover card on every level, and is the legend entry when the legend is built from the data. On the world map, the card names it after the colouring's label, and leaves it out where the card already says it, such as the group when colouring by group.
-- `value`: `None` means "no data": the item is drawn grey and counted under **No data**. On the floor, a number from 0 to 100 draws a gauge on the rack and prints the percentage. Anything else is only a marker that the item has data.
-
-An item missing from the dictionary counts as no data. If the function raises, the error is logged and every item is drawn grey; the page still opens.
+| Field | What it is |
+|---|---|
+| `label` | The sentence in the item's hover card: `'62% of 8 kW'`, `'Support ends 2030-09-24'`. On the world map, the card names it after the colouring's label, and leaves it out where the card already says it. |
+| `band` | The key of the legend band the item falls in. Required when the colouring declares bands. |
+| `colour` | A hex colour such as `'#4c9f70'`. Only for a colouring without bands, and optional there. |
+| `gauge` | A fraction from 0 to 1, for a reading that measures a quantity. The racks on a floor draw it as a gauge and print it as a percentage. The other levels ignore it. |
+| `facts` | More lines for the hover card, as `(label, text)` pairs, shown while this colouring is the one drawn. |
 
 ### The legend
 
-- **Fixed bands:** pass `legend=[LegendEntry(colour, label), …]` (`netbox_spatial_lens.overlays.LegendEntry`). Every colour your function returns must be one of these colours, and each colour must be used by one entry only: the legend places a value in its band by colour. A shared link names the band by its label, so keep the labels stable. Use fixed bands when the bands exist whatever the data is, such as "how full". `netbox_spatial_lens.palette.utilisation_colour(percent)` and `netbox_spatial_lens.overlays.UTILISATION_LEGEND` give the plugin's own four bands.
-- **Bands from the data:** pass no legend. The legend then has one entry per distinct `label`, in name order, and filters by label, so two labels may share a colour. Use it when the values are names, such as tenants. `netbox_spatial_lens.palette.distinct_colours(names)` gives each name a colour that is stable across restarts and not used by another name.
+A colouring has one of two kinds of legend.
 
-The **No data** entry is always added last.
+**Declared bands.** Pass `bands=` when the bands exist whatever the data is, such as "how full". Each `Band(label, colour, key='')` has a key, which is the label as a slug (`'90-and-over'`) unless you give one. A reading names its band by that key, and the band gives the colour. Every band is listed, also at zero. A shared link carries the key, so keep the keys stable; the labels and the colours can change.
 
-### Which colouring a page opens with
+For a quantity, a `Scale` holds the bands with their limits and places a number for you:
 
-The one named in the URL. If no colouring has that name, the default from the settings (`default_overlay`, `default_device_overlay`, `default_site_overlay` or `default_circuit_overlay`). If no colouring has that name either, the first one registered. A link to a colouring that no longer exists still opens the page.
+```python
+HEADROOM = Scale(
+    (50, Band('Under 50%', '#4c9f70')),      # under 50
+    (90, Band('50 to 89%', '#d9b23f')),      # under 90
+    (None, Band('90% and over', '#c9483f')),  # everything else
+)
+reading = HEADROOM.reading(62, '62% of 8 kW')  # band '50-to-89', gauge 0.62
+```
+
+`UTILISATION` is the plugin's own four-band scale for "how full", and `COMPLETION` its six-band scale for "how complete". Use them so that your colouring reads like the built-in ones.
+
+**Bands from the data.** Pass no bands when the values are names, such as tenants. The legend then has one entry per distinct `label`, in name order. Leave `colour` empty and each label gets a colour that is stable across restarts and that no other label wears. Give a `colour` when the name has one of its own, such as a role. `by_name(items, 'tenant')` builds these readings from a related object.
+
+The **No data** entry is always added last, when something falls in it.
+
+### The context
+
+The second argument says where the colouring is asked.
+
+| Field | What it is |
+|---|---|
+| `context.level` | The `Level`. |
+| `context.user` | The reader. `None` when nobody is logged in to ask, as in a management command. |
+| `context.scope` | What the drawing is of: the `Floor`, the `Rack`, or `None` on the map. |
+| `context.visible(queryset)` | The queryset, restricted to what the reader may view. |
+| `context.mounted` | `Level.DEVICES` only: what the rack view already knows of each device, by device id, with `port_count`, `connected_count` and `power` (`allocated_watts`, `maximum_watts`, or `None`). |
 
 ### Permissions
 
-Every page draws only the items the reader may view, so the items your function gets are safe to read. The function does not get the reader. If it reads other objects, such as the devices in a rack, a circuit or a monitoring system, do not put in a label what some readers may not see.
+Every page draws only the items the reader may view, so the items your function gets are safe to read. If the function reads other objects, such as the devices in a rack, restrict them with `context.visible()`, so a label never names what the reader may not see. For data outside NetBox, such as a monitoring system, decide with `context.user`.
 
-### Example: heat load on the floor
+### Example
 
-This colours each rack by a heat load recorded in a rack custom field, `heat_load_kw`, against the rack's own cooling capacity. A rack with either value missing is no data. The bands are fixed.
+This file is a whole extension. It adds four colourings.
 
 ```python
-# yourplugin/lens.py
-from netbox_spatial_lens.overlays import RackValue
-from netbox_spatial_lens.palette import utilisation_colour
+# yourplugin/spatial_lens.py
+from datetime import date
+
+from dcim.models import Device
+
+from netbox_spatial_lens.extend import UTILISATION, Band, Level, Reading, colouring, palette
 
 
-def heat_overlay(racks):
-    values = {}
+@colouring(Level.RACKS, 'heat', label='Heat', description='Heat load against cooling capacity.', bands=UTILISATION)
+def heat(racks, context):
+    readings = {}
     for rack in racks:
         load = rack.custom_field_data.get('heat_load_kw')
         if load is None or not rack.cooling_capacity:
             continue  # no data: grey, and counted under "No data"
         percent = float(load) / float(rack.cooling_capacity) * 100
-        values[rack.pk] = RackValue(
-            colour=utilisation_colour(percent),
-            label=f'{load:g} of {rack.cooling_capacity:g} kW',
-            value=percent,  # a number, so the floor draws a gauge
-        )
-    return values
-```
-
-The result: a **Heat** button beside the built-in colourings, each rack gauged against its own cooling capacity, and the plugin's four bands in the legend.
-
-![A hall of 80 racks coloured by the Heat example: each rack gauged against its own cooling capacity, the legend counting 23 under 50%, 33 from 50 to 74%, 17 from 75 to 89% and 7 at 90% and over, and the hover card of H05 reading 14.1 of 16.00 kW](images/extending-heat.png)
-
-### Example: end of support in the rack view
-
-This colours each device by a date custom field, `support_end`. The bands are fixed, in the palette's status colours.
-
-```python
-# yourplugin/support.py
-from datetime import date
-
-from netbox_spatial_lens.overlays import LegendEntry, RackValue
-from netbox_spatial_lens.palette import STATUS_COLOURS
-
-ENDED = LegendEntry(STATUS_COLOURS['red'], 'Support ended')
-ENDING = LegendEntry(STATUS_COLOURS['orange'], 'Support ends within a year')
-SUPPORTED = LegendEntry(STATUS_COLOURS['green'], 'Supported')
-SUPPORT_LEGEND = [ENDED, ENDING, SUPPORTED]
+        readings[rack.pk] = UTILISATION.reading(percent, f'{load:g} of {rack.cooling_capacity:g} kW')
+    return readings
 
 
-def support_overlay(mounted):
+FAILED = (
+    Band('No failed device', palette.STATUS_COLOURS['green'], key='none'),
+    Band('A failed device', palette.STATUS_COLOURS['red'], key='some'),
+)
+
+
+@colouring(Level.RACKS, 'failed', label='Failed', description='The racks with a failed device.', bands=FAILED)
+def failed(racks, context):
+    # Only the devices the reader may view: the card names them.
+    devices = context.visible(Device.objects.filter(rack__in=racks, status='failed'))
+    names = {}
+    for rack_id, name in devices.values_list('rack_id', 'name'):
+        names.setdefault(rack_id, []).append(name)
+    readings = {}
+    for rack in racks:
+        if rack.pk in names:
+            failed_names = sorted(names[rack.pk])
+            readings[rack.pk] = Reading(f'{len(failed_names)} failed', band='some', facts=[('Failed', ', '.join(failed_names))])
+        else:
+            readings[rack.pk] = Reading('No failed device', band='none')
+    return readings
+
+
+SUPPORT = (
+    Band('Support ended', palette.STATUS_COLOURS['red'], key='ended'),
+    Band('Support ends within a year', palette.STATUS_COLOURS['orange'], key='ending'),
+    Band('Supported', palette.STATUS_COLOURS['green'], key='supported'),
+)
+
+
+@colouring(Level.DEVICES, 'support', label='Support', description='When vendor support ends.', bands=SUPPORT)
+def support(devices, context):
     today = date.today()
-    values = {}
-    for m in mounted:
-        end = m.device.custom_field_data.get('support_end')
+    readings = {}
+    for device in devices:
+        end = device.custom_field_data.get('support_end')
         if not end:
             continue  # no data
         days = (date.fromisoformat(end) - today).days
-        band = ENDED if days < 0 else ENDING if days < 365 else SUPPORTED
-        values[m.device.pk] = RackValue(colour=band.colour, label=f'Support ends {end}', value=end)
-    return values
+        band = 'ended' if days < 0 else 'ending' if days < 365 else 'supported'
+        readings[device.pk] = Reading(f'Support ends {end}', band=band)
+    return readings
+
+
+@colouring(Level.SITES, 'tier', label='Tier', description='The service tier of each site.')
+def tier(sites, context):
+    tiers = {site.pk: site.custom_field_data.get('service_tier') for site in sites}
+    return {pk: Reading(name) for pk, name in tiers.items() if name}
 ```
 
-The result: a **Support** button beside the built-in colourings, each device in its band, and the date in its hover card.
+**Heat** colours each rack by a heat load recorded in a rack custom field, `heat_load_kw`, against the rack's own cooling capacity. A rack with either value missing is no data. Each rack is gauged, and the legend has the plugin's four bands.
+
+![A hall of 80 racks coloured by the Heat example: each rack gauged against its own cooling capacity, the legend counting 23 under 50%, 33 from 50 to 74%, 17 from 75 to 89% and 7 at 90% and over, and the hover card of H05 reading 14.1 of 16.00 kW](images/extending-heat.png)
+
+**Failed** marks the racks that hold a device in the Failed status, and names those devices in the hover card. It reads other objects, so it restricts them to what the reader may view.
+
+**Support** colours each device by a date custom field, `support_end`, in three declared bands, with the date in its hover card.
 
 ![Rack C04 from the front coloured by the Support example: devices in red, orange and green, the legend counting 12 ended, 11 ending within a year and 26 supported, and the hover card of c04-srv09 reading "Support ends 2030-09-24"](images/extending-support.png)
 
-### Example: service tier on the world map
-
-This colours each site by a select custom field, `service_tier`. The values are names, so the legend is built from the data.
-
-```python
-# yourplugin/tiers.py
-from netbox_spatial_lens.overlays import RackValue
-from netbox_spatial_lens.palette import distinct_colours
-
-
-def tier_overlay(sites):
-    tiers = {site.pk: site.custom_field_data.get('service_tier') for site in sites}
-    colours = distinct_colours(tier for tier in tiers.values() if tier)
-    return {pk: RackValue(colour=colours[tier], label=tier, value=tier) for pk, tier in tiers.items() if tier}
-```
-
-The result: a **Tier** button on the map, one legend entry per tier in use, and the tier in each site's hover card.
+**Tier** colours each site by a select custom field, `service_tier`. The values are names, so the legend is built from the data: one entry per tier in use.
 
 ![The world map coloured by the Tier example: the legend lists Tier 1, Tier 2 and Tier 3 with their site counts, and the hover card of D. S. Weaver Labs reads "Tier 3"](images/extending-tier.png)
 
-### Registering
+### Replacing or removing a built-in colouring
 
-Register from your plugin's `ready()`:
+A colouring registered under the name of a built-in one replaces it: `@colouring(Level.RACKS, 'power', ...)` takes the place of the plugin's **Power**. If two plugins register the same name, the one imported last wins and a warning is logged.
 
-```python
-# yourplugin/__init__.py
-from netbox.plugins import PluginConfig
+To remove a built-in colouring, leave it out of `builtin_rack_colourings`, `builtin_device_colourings`, `builtin_site_colourings` or `builtin_circuit_colourings` (see [Configuration](configuration.md)).
 
+### Which colouring a page opens with
 
-class YourPluginConfig(PluginConfig):
-    name = 'yourplugin'
-    # ...
+The one named in the URL. If no colouring has that name, the default from the settings (`default_rack_colouring`, `default_device_colouring`, `default_site_colouring` or `default_circuit_colouring`). If no colouring has that name either, the first one registered. A link to a colouring that no longer exists still opens the page.
 
-    def ready(self):
-        super().ready()
-        from netbox_spatial_lens.device_overlays import register_device_overlay
-        from netbox_spatial_lens.overlays import UTILISATION_LEGEND, register_overlay
-        from netbox_spatial_lens.site_overlays import register_site_overlay
+On the floor, a default colouring that has no data for any rack gives way to the first colouring that has some, and the page says so. A colouring named in the URL is kept as it is.
 
-        from .lens import heat_overlay
-        from .support import SUPPORT_LEGEND, support_overlay
-        from .tiers import tier_overlay
+### What stays stable
 
-        register_overlay(
-            'heat',
-            'Heat',
-            heat_overlay,
-            description='Heat load against cooling capacity.',
-            legend=UTILISATION_LEGEND,
-        )
-        register_device_overlay(
-            'support',
-            'Support',
-            support_overlay,
-            description='When vendor support ends.',
-            legend=SUPPORT_LEGEND,
-        )
-        register_site_overlay('tier', 'Tier', tier_overlay, description='The service tier of each site.')
+`netbox_spatial_lens.extend` is the public interface: `colouring`, `Level`, `Reading`, `Band`, `Scale`, `Context`, `by_name`, `UTILISATION`, `COMPLETION` and `palette`. A change to one of these names, or to what a colouring function gets and returns, is listed under **Upgrade notes** in the changelog. Everything else in the plugin can change in any release.
 
+### Upgrading a colouring from 0.5
 
-config = YourPluginConfig
-```
-
-List your plugin after `netbox_spatial_lens` in `PLUGINS`. A name registered twice keeps the later registration, so this order also lets you replace a built-in colouring by registering its name. To remove a built-in colouring instead, leave it out of `enable_builtin_overlays`, `enable_builtin_device_overlays`, `enable_builtin_site_overlays` or `enable_builtin_circuit_overlays` (see [Configuration](configuration.md)).
+| 0.5 | 0.6 |
+|---|---|
+| `register_overlay`, `register_device_overlay`, `register_site_overlay`, called from `ready()` | `@colouring(Level.RACKS \| DEVICES \| SITES \| CIRCUITS, ...)` in `yourplugin/spatial_lens.py` |
+| `def fn(items)` | `def fn(items, context)` |
+| `RackValue(colour, label, value)` | `Reading(label, band=..., colour=..., gauge=...)` |
+| `value=None` for no data | Leave the item out |
+| `value=62` draws a gauge | `gauge=0.62`, or `UTILISATION.reading(62, label)` |
+| `legend=[LegendEntry(colour, label)]`, a value placed by its colour | `bands=[Band(label, colour)]`, a reading placed by `band=<key>` |
+| `UTILISATION_LEGEND` and `utilisation_colour(percent)` | `UTILISATION` and `UTILISATION.reading(percent, label)` |
+| The rack view hands over mounted devices, keyed by `m.device.pk` | It hands over `Device` objects; the port counts and the power are in `context.mounted[device.pk]` |
+| `distinct_colours(names)` for a legend from the data | Leave `colour` empty |
+| Settings `enable_builtin_overlays`, `default_overlay` | `builtin_rack_colourings`, `default_rack_colouring` |
+| Settings `enable_builtin_device_overlays`, `default_device_overlay` | `builtin_device_colourings`, `default_device_colouring` |
+| Settings `enable_builtin_site_overlays`, `default_site_overlay` | `builtin_site_colourings`, `default_site_colouring` |
+| `?overlay=` on the floor, the site page and the world map | `?colour=` on the floor and the site page, `?sites=` on the world map |
 
 ## Filter by
 
@@ -229,7 +277,7 @@ The dev stack registers every example on this page, read from this page, so what
 
 | Query parameter | Effect |
 |---|---|
-| `overlay=<name>` | The colouring to evaluate, chosen as the floor page chooses it (see [Which colouring a page opens with](#which-colouring-a-page-opens-with)). |
+| `colour=<name>` | The colouring to evaluate, chosen as the floor page chooses it (see [Which colouring a page opens with](#which-colouring-a-page-opens-with)). |
 | `runs=1` | Also return the cable runs between racks and the cables that leave the floor. |
 
 Positions and sizes are in centimetres from the room's top-left corner. A rack's `x` and `y` are its centre.
@@ -237,8 +285,8 @@ Positions and sizes are in centimetres from the room's top-left corner. A rack's
 | Key | Holds |
 |---|---|
 | `floor` | `id`, `name`, `width_cm`, `depth_cm` |
-| `overlay` | `name`, `label`, and `legend` as a list of `colour` and `label`; `null` when no colouring is registered |
-| `racks` | For each rack: `rack_id`, `name`, `x`, `y`, `rotation` (degrees clockwise), `width`, `depth`, `u_height`, `estimated_footprint`, `colour`, `label`, `fraction` (0 to 1, or `null` when the colouring measures no quantity) and `facts` (label and value pairs) |
+| `colouring` | `name`, `label`, and `legend` as a list of `band` (its key), `colour`, `label` and `count`; `null` when no colouring is registered |
+| `racks` | For each rack: `rack_id`, `name`, `x`, `y`, `rotation` (degrees clockwise), `width`, `depth`, `u_height`, `estimated_footprint`, `colour`, `label`, `band` (the key of its legend band), `fraction` (0 to 1, or `null` when the colouring measures no quantity) and `facts` (label and value pairs) |
 | `layers` | The enabled background images: `id`, `name`, `source` (the image URL), `x`, `y`, `width`, `height`, `rotation`, `opacity` |
 | `runs` | With `runs=1`: `rack_a`, `rack_b` and the `count` of cables between them |
 | `exits` | With `runs=1`: `rack`, the `label` and `kind` of what the cables reach, their `count`, and the `x` and `y` of the point on the wall |

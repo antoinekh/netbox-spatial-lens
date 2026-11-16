@@ -14,7 +14,7 @@ PLUGINS_CONFIG = {
 
 # The extending examples, off by default so the stack shows the plugin as installed: the
 # colourings from docs/extending.md, and the demo's rack and device custom field offered as a
-# filter. `make up EXAMPLES=true` turns them on; listed after the plugin they extend.
+# filter. `make up EXAMPLES=true` turns them on.
 if os.environ.get('LENS_EXAMPLES', 'false').lower() == 'true':
     PLUGINS.append('lens_examples')
     PLUGINS_CONFIG['netbox_spatial_lens']['filter_custom_fields'] = ['compliancy']

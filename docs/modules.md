@@ -11,7 +11,10 @@ What each part of the plugin holds. The Python modules are under `netbox_spatial
 | `floor_scene` | A floor in millimetres for the 3D drawing: cabinets, the arcs between racks and the cabling to the walls, and each rack's devices for the Devices view |
 | `cabling` / `ports` / `power` / `floor_cabling` | Resolved in bulk, never per object |
 | `tracing` | Following a path end to end, and a power chain past the PDU |
-| `overlays` / `device_overlays` / `site_overlays` / `circuit_overlays` | The colourings of each level, and of the circuits on the map, and their built-ins. `overlays` also holds what they share: the `Registry`, the legend rules and which colouring a page opens with |
+| `extend` | The public interface for another plugin: what a colouring is written with |
+| `colouring` | What every colouring shares: levels, readings, bands and scales, the context, the legend rules, and the one registry that finds the `spatial_lens` module of each installed app |
+| `rack_colourings` / `device_colourings` / `site_colourings` / `circuit_colourings` | The built-in colourings of each level |
+| `stats` | The figures in the strip above a drawing |
 | `palette` | Every colour that carries meaning, in one place |
 | `tags` | The tags in use on a floor or in a rack, for the Tags finder |
 | `field_filters` | Custom fields offered as filters, the way tags are |

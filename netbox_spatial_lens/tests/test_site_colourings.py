@@ -15,12 +15,8 @@ from dcim.models import Region, Site, SiteGroup
 from django.test import TestCase
 from tenancy.models import Tenant
 
+from netbox_spatial_lens.colouring import Colouring, Level, registry
 from netbox_spatial_lens.palette import NO_DATA, NODE, categorical_colour, distinct_colours
-from netbox_spatial_lens.site_overlays import (
-    SiteOverlay,
-    get_site_overlay,
-    get_site_overlays,
-)
 
 
 def make_site(name, **kwargs):
@@ -31,25 +27,25 @@ class RegistryTest(TestCase):
     def test_the_four_builtins_are_selectable(self):
         # First, and in this order. Another installed plugin may register more after them.
         self.assertEqual(
-            [o.name for o in get_site_overlays()][:4],
+            [o.name for o in registry.all(Level.SITES)][:4],
             ['group', 'status', 'tenant', 'region'],
         )
 
     def test_an_unknown_name_resolves_to_nothing(self):
         # A link carrying a colouring a later release removed must not 500 the map.
-        self.assertIsNone(get_site_overlay('no-such-thing'))
+        self.assertIsNone(registry.get(Level.SITES, 'no-such-thing'))
 
     def test_a_colouring_that_raises_leaves_the_map_grey(self):
         # A broken colouring must not take the world map down. The points are still worth
         # looking at with one reading missing.
-        def broken(sites):
+        def broken(sites, context):
             raise RuntimeError('boom')
 
         # Built rather than registered: the registry is process-wide, and a test that leaves
         # a fifth colouring in it changes what every later test sees on the toolbar.
-        overlay = SiteOverlay(name='broken', label='Broken', fn=broken)
+        colouring = Colouring(Level.SITES, 'broken', 'Broken', broken)
         site = make_site('Alpha')
-        values = overlay.evaluate([site])
+        values = colouring.evaluate([site])
         self.assertFalse(values[site.pk].has_data)
 
 
@@ -57,16 +53,16 @@ class GroupTest(TestCase):
     def test_a_site_takes_its_group_colour(self):
         group = SiteGroup.objects.create(name='Branch Offices', slug='branch')
         site = make_site('Branch 1', group=group)
-        value = get_site_overlay('group').evaluate([site])[site.pk]
+        value = registry.get(Level.SITES, 'group').evaluate([site])[site.pk]
         self.assertEqual(value.label, 'Branch Offices')
         self.assertEqual(value.colour, categorical_colour('Branch Offices'))
 
     def test_a_site_in_no_group_is_grey_and_counted(self):
         site = make_site('Loose')
-        overlay = get_site_overlay('group')
-        values = overlay.evaluate([site])
+        colouring = registry.get(Level.SITES, 'group')
+        values = colouring.evaluate([site])
         self.assertFalse(values[site.pk].has_data)
-        entry = next(e for e in overlay.legend_for(values.values()) if e.label == 'No data')
+        entry = next(e for e in colouring.legend(values.values()) if e.label == 'No data')
         self.assertEqual(entry.count, 1)
         self.assertEqual(entry.colour, NO_DATA)
 
@@ -74,7 +70,7 @@ class GroupTest(TestCase):
 class StatusTest(TestCase):
     def test_a_site_reads_the_colour_netbox_gives_its_status(self):
         site = make_site('Planned DC', status='planned')
-        value = get_site_overlay('status').evaluate([site])[site.pk]
+        value = registry.get(Level.SITES, 'status').evaluate([site])[site.pk]
         self.assertEqual(value.label, site.get_status_display())
 
     def test_every_site_has_a_status_so_none_is_grey(self):
@@ -83,17 +79,17 @@ class StatusTest(TestCase):
         # quietly under-reporting.
         make_site('A', status='active')
         make_site('B', status='retired')
-        overlay = get_site_overlay('status')
-        values = overlay.evaluate(Site.objects.all())
-        grey = next(e for e in overlay.legend_for(values.values()) if e.label == 'No data')
+        colouring = registry.get(Level.SITES, 'status')
+        values = colouring.evaluate(Site.objects.all())
+        grey = next(e for e in colouring.legend(values.values()) if e.label == 'No data')
         self.assertEqual(grey.count, 0)
 
     def test_two_statuses_are_two_bands(self):
         make_site('A', status='active')
         make_site('B', status='planned')
-        overlay = get_site_overlay('status')
-        values = overlay.evaluate(Site.objects.all())
-        named = [e for e in overlay.legend_for(values.values()) if e.count]
+        colouring = registry.get(Level.SITES, 'status')
+        values = colouring.evaluate(Site.objects.all())
+        named = [e for e in colouring.legend(values.values()) if e.count]
         self.assertEqual(len(named), 2)
 
 
@@ -101,7 +97,7 @@ class TenantTest(TestCase):
     def test_a_site_takes_its_tenant_colour(self):
         tenant = Tenant.objects.create(name='Dunder Mifflin', slug='dunder')
         site = make_site('Scranton', tenant=tenant)
-        value = get_site_overlay('tenant').evaluate([site])[site.pk]
+        value = registry.get(Level.SITES, 'tenant').evaluate([site])[site.pk]
         self.assertEqual(value.label, 'Dunder Mifflin')
         self.assertEqual(value.colour, distinct_colours(['Dunder Mifflin'])['Dunder Mifflin'])
 
@@ -114,15 +110,15 @@ class TenantTest(TestCase):
         )
         tenant = Tenant.objects.create(name=colliding, slug='colliding')
         site = make_site('Collides', tenant=tenant)
-        value = get_site_overlay('tenant').evaluate([site])[site.pk]
+        value = registry.get(Level.SITES, 'tenant').evaluate([site])[site.pk]
         self.assertEqual(value.label, colliding)
         self.assertNotEqual(value.colour, NODE['provider'])
 
     def test_an_untenanted_site_is_grey_and_counted(self):
         site = make_site('Nobody')
-        overlay = get_site_overlay('tenant')
-        values = overlay.evaluate([site])
-        entry = next(e for e in overlay.legend_for(values.values()) if e.label == 'No data')
+        colouring = registry.get(Level.SITES, 'tenant')
+        values = colouring.evaluate([site])
+        entry = next(e for e in colouring.legend(values.values()) if e.label == 'No data')
         self.assertEqual(entry.count, 1)
         self.assertFalse(values[site.pk].has_data)
 
@@ -131,14 +127,14 @@ class RegionTest(TestCase):
     def test_a_site_takes_its_region_colour(self):
         region = Region.objects.create(name='Nord', slug='nord')
         site = make_site('Lille', region=region)
-        value = get_site_overlay('region').evaluate([site])[site.pk]
+        value = registry.get(Level.SITES, 'region').evaluate([site])[site.pk]
         self.assertEqual(value.label, 'Nord')
 
     def test_a_site_in_no_region_is_grey_and_counted(self):
         site = make_site('Nowhere')
-        overlay = get_site_overlay('region')
-        values = overlay.evaluate([site])
-        entry = next(e for e in overlay.legend_for(values.values()) if e.label == 'No data')
+        colouring = registry.get(Level.SITES, 'region')
+        values = colouring.evaluate([site])
+        entry = next(e for e in colouring.legend(values.values()) if e.label == 'No data')
         self.assertEqual(entry.count, 1)
         self.assertFalse(values[site.pk].has_data)
 

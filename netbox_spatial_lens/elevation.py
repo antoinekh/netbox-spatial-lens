@@ -337,8 +337,8 @@ def rack_summary(elevation: 'RackElevation') -> list:
 
     Costs nothing: everything here has already been resolved to draw the elevation.
     """
-    from netbox_spatial_lens.overlays import Stat
     from netbox_spatial_lens.palette import utilisation_colour
+    from netbox_spatial_lens.stats import Stat
 
     space = elevation.space
     total = space.get('total') or 0

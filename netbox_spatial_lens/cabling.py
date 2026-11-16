@@ -24,7 +24,7 @@ from typing import Any
 from dcim.models import Cable, CableTermination, Rack
 from django.contrib.contenttypes.models import ContentType
 
-from netbox_spatial_lens.overlays import LegendEntry
+from netbox_spatial_lens.colouring import LegendEntry
 from netbox_spatial_lens.palette import KIND
 
 __all__ = (

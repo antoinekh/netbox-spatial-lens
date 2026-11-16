@@ -33,10 +33,10 @@
           {% endcomment %}
           <span class="lens-toolbar__label" id="lens-colour-sites">Sites</span>
           <div class="btn-group btn-group-sm" role="group" aria-labelledby="lens-colour-sites">
-            {% for o in overlays %}
-              <a href="?overlay={{ o.name }}{% if circuit_overlay %}&amp;circuits={{ circuit_overlay.name }}{% endif %}"
-                 class="btn btn-outline-primary{% if overlay and o.name == overlay.name %} active{% endif %}"
-                 {% if overlay and o.name == overlay.name %}aria-current="true"{% endif %}
+            {% for o in colourings %}
+              <a href="?sites={{ o.name }}{% if circuit_colouring %}&amp;circuits={{ circuit_colouring.name }}{% endif %}"
+                 class="btn btn-outline-primary{% if colouring and o.name == colouring.name %} active{% endif %}"
+                 {% if colouring and o.name == colouring.name %}aria-current="true"{% endif %}
                  title="{{ o.description }}">{{ o.label }}</a>
             {% endfor %}
           </div>
@@ -45,13 +45,13 @@
           is live are questions about the circuits, not about the sites they join. Named, because
           two rows of buttons side by side do not say which of them colours what.
           {% endcomment %}
-          {% if circuit_overlays and world.links %}
+          {% if circuit_colourings and world.links %}
             <span class="lens-toolbar__label" id="lens-colour-circuits">Circuits</span>
             <div class="btn-group btn-group-sm" role="group" aria-labelledby="lens-colour-circuits">
-              {% for o in circuit_overlays %}
-                <a href="?{% if overlay %}overlay={{ overlay.name }}&amp;{% endif %}circuits={{ o.name }}"
-                   class="btn btn-outline-primary{% if o.name == circuit_overlay.name %} active{% endif %}"
-                   {% if o.name == circuit_overlay.name %}aria-current="true"{% endif %}
+              {% for o in circuit_colourings %}
+                <a href="?{% if colouring %}sites={{ colouring.name }}&amp;{% endif %}circuits={{ o.name }}"
+                   class="btn btn-outline-primary{% if o.name == circuit_colouring.name %} active{% endif %}"
+                   {% if o.name == circuit_colouring.name %}aria-current="true"{% endif %}
                    title="{{ o.description }}">{{ o.label }}</a>
               {% endfor %}
             </div>
@@ -76,7 +76,7 @@
           strip and on the two buttons, and a third copy of them here said nothing new.
           {% endcomment %}
           <span class="text-muted lens-scale" data-lens-world-status></span>
-          {% include 'netbox_spatial_lens/inc/export.html' with name='World map' colouring=overlay.label %}
+          {% include 'netbox_spatial_lens/inc/export.html' with name='World map' colouring=colouring.label %}
           {% include 'netbox_spatial_lens/inc/help.html' with text='Click a site to open it. Hover a circuit to see its detail. Click a circuit to highlight it and its two ends, and to get the link that opens it. Sites and Circuits find by name and narrow the map to what you tick; tick one to trace it. Click legend bands to filter; you can pick several. Marker size is the rack count. Escape clears.' %}
         </div>
 
@@ -105,12 +105,12 @@
             </button>
             <div class="lens-map-legends__body">
               <div class="lens-map-legend">
-                <h3 class="lens-map-legend__title">Sites{% if overlay %} by {{ overlay.label|lower }}{% endif %}</h3>
+                <h3 class="lens-map-legend__title">Sites{% if colouring %} by {{ colouring.label|lower }}{% endif %}</h3>
                 {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.legend filter='sites' %}
               </div>
               {% if world.circuit_legend %}
                 <div class="lens-map-legend">
-                  <h3 class="lens-map-legend__title">Circuits by {{ circuit_overlay.label|lower }}</h3>
+                  <h3 class="lens-map-legend__title">Circuits by {{ circuit_colouring.label|lower }}</h3>
                   {% include 'netbox_spatial_lens/inc/legend.html' with legend=world.circuit_legend filter='circuits' %}
                 </div>
               {% endif %}

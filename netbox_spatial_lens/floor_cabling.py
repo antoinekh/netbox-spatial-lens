@@ -26,8 +26,8 @@ from urllib.parse import urlencode
 from dcim.models import CableTermination, Rack
 from django.urls import reverse
 
+from netbox_spatial_lens.colouring import LegendEntry
 from netbox_spatial_lens.geometry import PlacedRack
-from netbox_spatial_lens.overlays import LegendEntry
 from netbox_spatial_lens.palette import KIND
 
 __all__ = (
@@ -427,7 +427,7 @@ def cabling_legend(runs: Iterable[FloorRun], exits: Iterable[FloorExit]) -> list
     """
     What each colour on the plan means, and how many cables are in it.
 
-    The same builder the overlays use, so the cabling reads like every other legend on the
+    The same builder the colourings use, so the cabling reads like every other legend on the
     page. "Between racks" is listed even at zero: a plan with no line on it must say which
     line it is missing, not leave the reader to guess whether the toggle worked.
     """

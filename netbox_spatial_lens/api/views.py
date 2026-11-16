@@ -33,22 +33,24 @@ class FloorViewSet(NetBoxModelViewSet):
 
         The web view builds the same structure server-side. This endpoint exists so a second
         renderer, such as a 3D projection, consumes the floor without restating how a
-        footprint is resolved or how an overlay is evaluated.
+        footprint is resolved or how a colouring is evaluated.
         """
         from dcim.models import Device, Rack
 
+        from netbox_spatial_lens.colouring import Level, registry
         from netbox_spatial_lens.floor_cabling import build_floor_exits, build_floor_runs
-        from netbox_spatial_lens.layout import build_layout, resolve_overlay
+        from netbox_spatial_lens.layout import build_layout
 
         floor = self.get_object()
-        overlay = resolve_overlay(request.GET.get('overlay'))
+        colouring = registry.resolve(Level.RACKS, request.GET.get('colour'))
         # Restricted as the floor page is: a placement is the plugin's own object, the rack and
         # the devices behind it are not, and the API must not show what the page hides.
         placed = build_layout(
             floor,
-            overlay,
+            colouring,
             racks=Rack.objects.restrict(request.user, 'view'),
             devices=Device.objects.restrict(request.user, 'view'),
+            user=request.user,
         )
         # As on the page: the runs cost a query, so they are sent only when asked for.
         show_runs = request.GET.get('runs') == '1'
@@ -63,14 +65,15 @@ class FloorViewSet(NetBoxModelViewSet):
                     'width_cm': floor.width_cm,
                     'depth_cm': floor.depth_cm,
                 },
-                'overlay': {
-                    'name': overlay.name,
-                    'label': overlay.label,
+                'colouring': {
+                    'name': colouring.name,
+                    'label': colouring.label,
                     'legend': [
-                        {'colour': e.colour, 'label': e.label} for e in overlay.legend_for([p.value for p in placed])
+                        {'band': e.key, 'colour': e.colour, 'label': e.label, 'count': e.count}
+                        for e in colouring.legend(p.value for p in placed)
                     ],
                 }
-                if overlay
+                if colouring
                 else None,
                 'racks': [
                     {
@@ -85,8 +88,9 @@ class FloorViewSet(NetBoxModelViewSet):
                         'estimated_footprint': p.estimated,
                         'colour': p.colour,
                         'label': p.label,
+                        'band': p.band,
                         # Where this rack sits between empty and full, or null where the
-                        # overlay measures a name rather than a quantity. A second renderer
+                        # colouring measures a name rather than a quantity. A second renderer
                         # needs the magnitude for the same reason the plan does: a band alone
                         # cannot tell 12% from 48%.
                         'fraction': p.fraction,

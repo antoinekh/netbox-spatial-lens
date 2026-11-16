@@ -7,8 +7,9 @@ import re
 from dcim.models import Location
 from django.urls import reverse
 
+from netbox_spatial_lens.colouring import Level, registry
 from netbox_spatial_lens.filtersets import FloorFilterSet, RackPlacementFilterSet
-from netbox_spatial_lens.layout import build_layout, rack_rows, resolve_overlay
+from netbox_spatial_lens.layout import build_layout, rack_rows
 from netbox_spatial_lens.models import Floor, RackPlacement
 from netbox_spatial_lens.tables import FloorTable
 from netbox_spatial_lens.tests.base import make_device, make_floor, make_rack, place
@@ -34,7 +35,7 @@ class FloorPageTest(ViewTestCase):
         self.assertContains(response, 'data-lens-zoom="in"')
 
     def test_the_racks_are_a_table_that_sorts(self):
-        response = self._get('?overlay=space')
+        response = self._get('?colour=space')
         self.assertContains(response, 'data-lens-rack-table')
         self.assertContains(response, 'data-sort="number"')
         # The same band and name the plan carries, so the legend and the find box reach the rows.
@@ -66,7 +67,7 @@ class RackRowTest(ViewTestCase):
         place(floor, r2, x=300, y=100)
         make_device(self.site, r2, 'srv', self.role, self.manufacturer, u_height=5)
 
-        rows = rack_rows(build_layout(floor, resolve_overlay('space')))
+        rows = rack_rows(build_layout(floor, registry.get(Level.RACKS, 'space')))
         self.assertEqual([row.rack.name for row in rows], ['R2', 'R10'])
         self.assertEqual(rows[0].space_percent, 50)
         self.assertEqual(rows[0].free_units, 5)

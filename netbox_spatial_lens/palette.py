@@ -53,7 +53,7 @@ KIND = {
     'other': '#8a8f98',
 }
 
-# How full something is, shared by the power and space overlays and by the allocation bars,
+# How full something is, shared by the power and space colourings and by the allocation bars,
 # so "nearly full" looks the same wherever it is said.
 UTILISATION = (
     (50, '#4c9f70', 'Under 50%'),

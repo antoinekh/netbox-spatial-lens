@@ -126,7 +126,7 @@ re-parses the page.
       on the object page instead ended the journey at its second step.
       {% endcomment %}
       {% if linkify %}<a href="{% url 'dcim:rack_lens' pk=p.rack.pk %}" class="lens-rack-link">{% endif %}
-      <g class="lens-rack{% if overlay and not p.has_data %} lens-rack--nodata{% endif %}{% if p.fraction != None %} lens-rack--gauged{% endif %}"
+      <g class="lens-rack{% if colouring and not p.has_data %} lens-rack--nodata{% endif %}{% if p.fraction != None %} lens-rack--gauged{% endif %}"
          data-rack-id="{{ p.rack.pk }}"
          data-name="{{ p.rack.name }}"
          data-asset-tag="{{ p.rack.asset_tag|default:'' }}"
@@ -158,7 +158,7 @@ re-parses the page.
         {% comment %}
         The gauge. A band alone cannot tell 12% from 48%: both are "under 50%", both draw the
         same green box, and a whole room came out one colour saying nothing. This carries the
-        magnitude the band rounds away. Only for an overlay measuring a quantity; a role or a
+        magnitude the band rounds away. Only for a colouring measuring a quantity; a role or a
         cooling capability has no "how much" to draw.
         {% endcomment %}
         {% if p.fraction != None %}
