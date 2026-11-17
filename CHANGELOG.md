@@ -27,7 +27,7 @@
 - **Extending:** `Band` and `Scale` declare a legend, and the plugin's own scales `UTILISATION` and `COMPLETION` are public. `Scale.reading(percent, label)` gives the band and the gauge in one call.
 - **Extending:** the function gets a `context` with the reader (`user`), what is drawn (`scope`: the floor or the rack) and `visible(queryset)`, which restricts a queryset to what the reader may view. In the rack view, the function gets `Device` objects, and the port counts and the power are in `context.mounted`.
 - **REST API:** in `floors/<id>/layout/`, each legend entry has its `band` key and its `count`, and each rack has its `band`.
-- **Docs:** the captures of the world map and of the four extending examples are retaken, and the README shows the calibration of a background layer.
+- **Docs:** every capture of the README and of the extending page is retaken on this version, and the README shows the calibration of a background layer.
 
 ## v0.5.0 (2026-11-16)
 
