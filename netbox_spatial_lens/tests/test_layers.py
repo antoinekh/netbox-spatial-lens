@@ -5,6 +5,9 @@ The model's job is to hold one image and where it sits in the room; the view's j
 the enabled ones, in order, beneath everything else.
 """
 
+import copy
+
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
@@ -149,9 +152,13 @@ class FloorLayerViewTest(LensTestCase):
         self.assertContains(response, 'layer_upload.js')
         self.assertContains(response, 'pdfjs-dist')
 
-    @override_settings(PLUGINS_CONFIG={'netbox_spatial_lens': {'pdfjs_base': ''}})
     def test_the_layer_form_converts_nothing_when_pdfjs_is_turned_off(self):
-        response = self.client.get(reverse('plugins:netbox_spatial_lens:floorlayer_add'))
+        # A copy of every plugin's settings: another installed plugin, such as netbox-branching,
+        # reads its own settings while the form is drawn.
+        config = copy.deepcopy(settings.PLUGINS_CONFIG)
+        config['netbox_spatial_lens']['pdfjs_base'] = ''
+        with override_settings(PLUGINS_CONFIG=config):
+            response = self.client.get(reverse('plugins:netbox_spatial_lens:floorlayer_add'))
         self.assertContains(response, '"pdfjsBase": ""')
 
     def test_cable_runs_are_off_until_they_are_asked_for(self):
