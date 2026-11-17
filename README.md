@@ -39,7 +39,7 @@ https://github.com/user-attachments/assets/15360e00-abfa-40f1-a338-959fd32c0023
 
 Sites on a globe, sized by rack count and coloured by **group**, **status**, **tenant** or **region**, with the circuits between them coloured by **provider**, **type**, **status** or **tenant**. The two legends and the **Sites** and **Circuits** finders narrow the map. It needs WebGL and MapLibre, which loads from a CDN by default or from your own copy; tiles are optional.
 
-![A globe with sites in North America and Europe, circuits drawn as great circles across the Atlantic, and two legends naming the site groups and the circuit providers](docs/images/world.png)
+![A globe with sites in North America and Europe, circuits drawn as great circles across the Atlantic, two legends naming the site groups and the circuit providers, and a row of buttons for each: Sites by group, status, tenant or region, and Circuits by provider, type, status or tenant](docs/images/world.png)
 
 ### The site
 
@@ -56,6 +56,8 @@ The room in 3D, every rack a cabinet at its real position, rotation and height, 
 ![The same hall of 80 racks in the Devices view: every cabinet open with its real devices, roofs coloured by rack role, and the hover card of one switch naming its rack, type and unit](docs/images/floor-devices.png)
 
 ![The hall in the Devices view with "c" in the find box: the ten racks of row C stand out with their devices and every other rack fades, and the hover card of one switch in C08](docs/images/floor-devices-find.png)
+
+![The layout editor with the architect plan of the hall being calibrated: a frame with four corner handles round the drawing, two points set on the wall of the loading bay, and the Background layers panel with the opacity, the rotation, Set scale and the distance between the two points, 5.45 metres](docs/images/calibrate.png)
 
 ### The rack
 

@@ -188,7 +188,7 @@ def tier(sites, context):
 
 **Support** colours each device by a date custom field, `support_end`, in three declared bands, with the date in its hover card.
 
-![Rack C04 from the front coloured by the Support example: devices in red, orange and green, the legend counting 12 ended, 11 ending within a year and 26 supported, and the hover card of c04-srv09 reading "Support ends 2030-09-24"](images/extending-support.png)
+![Rack C04 from the front coloured by the Support example: devices in red, orange and green, the legend counting 14 ended, 9 ending within a year and 26 supported, and the hover card of c04-srv09 reading "Support ends 2030-09-24"](images/extending-support.png)
 
 **Tier** colours each site by a select custom field, `service_tier`. The values are names, so the legend is built from the data: one entry per tier in use.
 
