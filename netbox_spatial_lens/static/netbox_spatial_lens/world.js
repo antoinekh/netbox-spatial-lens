@@ -600,7 +600,11 @@
       select('node', node.key);
     });
 
+    // A circuit ends under its site's marker, and there the pointer is on the site.
+    const onSite = (event) => map.queryRenderedFeatures(event.point, { layers: ['sites'] }).length > 0;
+
     map.on('mousemove', 'links', function (event) {
+      if (onSite(event)) return;
       map.getCanvas().style.cursor = 'pointer';
       const key = String(event.features[0].properties.id);
       const entry = lines.get(key);
@@ -613,6 +617,7 @@
       popup.remove();
     });
     map.on('click', 'links', function (event) {
+      if (onSite(event)) return;
       popup.remove();
       select('link', String(event.features[0].properties.id), event.lngLat);
     });
